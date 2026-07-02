@@ -1,8 +1,10 @@
-"""Single-pass NL->SQL generator.
+"""NL->SQL generator: first-pass generation and error-driven repair.
 
-Contract: generate_sql(question, evidence, schema_ddl) -> one SQLite SQL string.
-One Gemini Flash call, no execution, no retries — that's the phase-1 baseline. Phases 2+
-wrap this in ADK with an executor loop; keep the surface (this function) stable.
+Contracts:
+  generate_sql(question, evidence, schema_ddl) -> one SQLite SQL string (phase-1 baseline).
+  repair_sql(question, evidence, schema_ddl, prev_sql, error) -> a corrected SQL string.
+Both are single Gemini Flash calls with no execution. The executor loop (loop.solve) drives
+retries; these functions just turn a prompt into SQL. Keep both surfaces stable.
 """
 import re
 import time
@@ -28,6 +30,27 @@ Rules:
 - Return only the columns the question asks for.
 """
 
+REPAIR_PROMPT = """Your previous SQLite query failed to run. Fix it.
+
+Database schema:
+{schema}
+
+External knowledge (use it): {evidence}
+
+Question: {question}
+
+Your previous query:
+{prev_sql}
+
+The database returned this error:
+{error}
+
+Rules:
+- Output ONLY the corrected SQL query. No prose, no markdown, no code fences.
+- Use exact table/column names from the schema; quote names with spaces in backticks.
+- Return only the columns the question asks for.
+"""
+
 
 def _get_client() -> genai.Client:
     global _client
@@ -43,14 +66,8 @@ def _strip_fence(text: str) -> str:
     return sql.rstrip(";").strip()
 
 
-def generate_sql(
-    question: str,
-    evidence: str,
-    schema_ddl: str,
-    model: str | None = None,
-    retries: int = 3,
-) -> str:
-    prompt = PROMPT.format(schema=schema_ddl, evidence=evidence or "(none)", question=question)
+def _complete(prompt: str, model: str | None, retries: int = 3) -> str:
+    """One Gemini call, backing off on transient API/rate-limit errors. Returns clean SQL."""
     last_err: Exception | None = None
     for attempt in range(retries):
         try:
@@ -62,3 +79,34 @@ def generate_sql(
             last_err = e
             time.sleep(2 ** attempt)
     raise RuntimeError(f"generation failed after {retries} tries: {last_err}")
+
+
+def generate_sql(
+    question: str,
+    evidence: str,
+    schema_ddl: str,
+    model: str | None = None,
+    retries: int = 3,
+) -> str:
+    prompt = PROMPT.format(schema=schema_ddl, evidence=evidence or "(none)", question=question)
+    return _complete(prompt, model, retries)
+
+
+def repair_sql(
+    question: str,
+    evidence: str,
+    schema_ddl: str,
+    prev_sql: str,
+    error: str,
+    model: str | None = None,
+    retries: int = 3,
+) -> str:
+    """Re-generate the SQL given the query that failed and the DB's error message."""
+    prompt = REPAIR_PROMPT.format(
+        schema=schema_ddl,
+        evidence=evidence or "(none)",
+        question=question,
+        prev_sql=prev_sql,
+        error=error,
+    )
+    return _complete(prompt, model, retries)

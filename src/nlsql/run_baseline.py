@@ -73,7 +73,7 @@ def main() -> None:
     print(f"generation errors: {errors}")
     print(f"wrote {out}")
     with open(config.RUNS_DIR / "scores.log", "a") as f:
-        f.write(json.dumps({"time": stamp, **summary, "errors": errors}) + "\n")
+        f.write(json.dumps({"time": stamp, "mode": "baseline", **summary, "errors": errors}) + "\n")
 
 
 if __name__ == "__main__":
