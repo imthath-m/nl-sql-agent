@@ -1,12 +1,14 @@
-"""Executor loop: generate -> execute -> repair on error, up to a cap, then explain.
+"""Executor loop: (retrieve -> plan ->) generate -> execute -> repair on error, then explain.
 
-This is the phase-2 core. agent.generate_sql does the first pass; on an execution failure
-the captured error is fed back through agent.repair_sql and the query re-run, up to
-max_repairs times. Once the SQL runs, explainer.explain restates the answer plainly.
+The phase-2 core is generate -> execute -> repair (feed the DB error back to the generator,
+up to max_repairs) -> explain. Phase 3 bolts two optional stages onto the front: a
+Schema-Retriever that prunes the DDL to the tables relevant to the question, and a Planner
+that decomposes the question into steps for the generator. Both are opt-in, so the phase-2
+behavior is exactly `solve(...)` with the defaults.
 """
 from dataclasses import dataclass
 
-from . import agent, bird, config, executor, explainer
+from . import agent, bird, config, executor, explainer, planner, retriever
 
 
 @dataclass
@@ -17,6 +19,8 @@ class Solution:
     sqls: list[str]             # every SQL tried, in order
     errors: list[str]           # errors captured between attempts, in order
     explanation: str | None     # plain-language answer, or None if SQL never ran
+    tables: list[str] | None    # tables the retriever kept, or None if retrieval was off
+    plan: list[str] | None      # planner steps, or None if planning was off
 
 
 def solve(
@@ -26,11 +30,17 @@ def solve(
     max_repairs: int = 3,
     model: str | None = None,
     explain: bool = True,
+    retrieve_top_k: int | None = None,
+    use_planner: bool = False,
 ) -> Solution:
-    schema = bird.schema_ddl(db_id)
+    if retrieve_top_k is not None:
+        tables, schema = retriever.retrieve_schema(question, evidence, db_id, retrieve_top_k)
+    else:
+        tables, schema = None, bird.schema_ddl(db_id)
+    steps = planner.plan(question, evidence, schema, model) if use_planner else None
     db = str(config.db_path(db_id))
 
-    sql = agent.generate_sql(question, evidence, schema, model)
+    sql = agent.generate_sql(question, evidence, schema, model, plan=steps)
     sqls, errors = [sql], []
     result = executor.execute(sql, db)
 
@@ -43,4 +53,4 @@ def solve(
         result = executor.execute(sql, db)
 
     explanation = explainer.explain(question, result.rows, model) if explain and result.ok else None
-    return Solution(sql, result, len(sqls), sqls, errors, explanation)
+    return Solution(sql, result, len(sqls), sqls, errors, explanation, tables, steps)
