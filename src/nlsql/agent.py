@@ -23,7 +23,7 @@ Database schema:
 External knowledge (use it): {evidence}
 
 Question: {question}
-
+{plan}
 Rules:
 - Output ONLY the SQL query. No prose, no markdown, no code fences.
 - Use exact table/column names from the schema; quote names with spaces in backticks.
@@ -81,14 +81,27 @@ def _complete(prompt: str, model: str | None, retries: int = 3) -> str:
     raise RuntimeError(f"generation failed after {retries} tries: {last_err}")
 
 
+def _plan_block(plan: list[str] | None) -> str:
+    """Render an optional phase-3 planner plan into the prompt (empty when no plan)."""
+    if not plan:
+        return ""
+    return "\nPlan (follow these steps):\n" + "\n".join(f"- {s}" for s in plan) + "\n"
+
+
 def generate_sql(
     question: str,
     evidence: str,
     schema_ddl: str,
     model: str | None = None,
     retries: int = 3,
+    plan: list[str] | None = None,
 ) -> str:
-    prompt = PROMPT.format(schema=schema_ddl, evidence=evidence or "(none)", question=question)
+    prompt = PROMPT.format(
+        schema=schema_ddl,
+        evidence=evidence or "(none)",
+        question=question,
+        plan=_plan_block(plan),
+    )
     return _complete(prompt, model, retries)
 
 

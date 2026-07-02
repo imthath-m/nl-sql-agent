@@ -16,6 +16,10 @@ DB_ROOT = BIRD_DIR / "dev_databases"
 RUNS_DIR = REPO_ROOT / "runs"
 MODEL = os.environ.get("NLSQL_MODEL", "gemini-2.5-flash")
 
+# Phase-3 schema retriever.
+EMBED_MODEL = os.environ.get("NLSQL_EMBED_MODEL", "text-embedding-004")
+RETRIEVE_TOP_K = int(os.environ.get("NLSQL_RETRIEVE_TOP_K", "5"))
+
 
 def db_path(db_id: str) -> Path:
     return DB_ROOT / db_id / f"{db_id}.sqlite"
