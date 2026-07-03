@@ -7,6 +7,7 @@ Both are single Gemini Flash calls with no execution. The executor loop (loop.so
 retries; these functions just turn a prompt into SQL. Keep both surfaces stable.
 """
 import re
+import threading
 import time
 
 from google import genai
@@ -14,6 +15,7 @@ from google import genai
 from . import config
 
 _client: genai.Client | None = None
+_client_lock = threading.Lock()  # ponytail: serialize lazy init; concurrent workers else build+GC-close duplicate clients
 
 PROMPT = """You are an expert SQLite analyst. Write ONE SQLite query that answers the question.
 
@@ -55,7 +57,9 @@ Rules:
 def _get_client() -> genai.Client:
     global _client
     if _client is None:
-        _client = genai.Client()  # reads GEMINI_API_KEY / Vertex env automatically
+        with _client_lock:
+            if _client is None:  # double-checked: only one Client ever built
+                _client = genai.Client()  # reads GEMINI_API_KEY or Vertex env automatically
     return _client
 
 
@@ -86,6 +90,20 @@ def _plan_block(plan: list[str] | None) -> str:
     if not plan:
         return ""
     return "\nPlan (follow these steps):\n" + "\n".join(f"- {s}" for s in plan) + "\n"
+
+
+def list_models() -> list[str]:
+    import os
+    region = os.environ.get("GOOGLE_CLOUD_LOCATION", "(unset)")
+    print(f"Vertex AI region: {region} (catalog only — inference availability may differ)")
+    return [m.name for m in _get_client().models.list()]
+
+def probe_model(model_name: str) -> bool:
+    try:
+        _get_client().models.get(model=model_name)
+        return True
+    except Exception:
+        return False
 
 
 def generate_sql(
