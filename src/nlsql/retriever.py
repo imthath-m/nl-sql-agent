@@ -70,20 +70,38 @@ def _doc_embeddings(db_id: str) -> list[list[float]]:
     return _doc_cache[db_id]
 
 
+def _top_scored(
+    qvec: list[float], names: list[str], docs: list[list[float]], top_k: int
+) -> list[tuple[str, float]]:
+    """Top-k (name, cosine) pairs, most similar first. Pure — no API, testable offline."""
+    scored = sorted(
+        ((n, _cosine(qvec, d)) for n, d in zip(names, docs)), key=lambda ns: ns[1], reverse=True
+    )
+    return [(n, round(s, 6)) for n, s in scored[:top_k]]
+
+
+def retrieve_scored(
+    question: str, evidence: str, db_id: str, top_k: int | None = None
+) -> list[tuple[str, float]]:
+    """Kept tables with their cosine similarity to the question — the score the gate reads.
+
+    Pass-through schemas (<= top_k tables, no embedding call) get score 1.0: nothing was
+    pruned, so there is no retrieval ambiguity to penalize.
+    """
+    top_k = top_k or config.RETRIEVE_TOP_K
+    names = [m[0] for m in _table_meta(db_id)]
+    if len(names) <= top_k:
+        return [(n, 1.0) for n in names]
+    qvec = _embed([f"{question}\n{evidence}".strip()], "RETRIEVAL_QUERY")[0]
+    return _top_scored(qvec, names, _doc_embeddings(db_id), top_k)
+
+
 def retrieve(question: str, evidence: str, db_id: str, top_k: int | None = None) -> list[str]:
     """Table names most relevant to the question, by embedding cosine similarity.
 
     Returns every table when the schema has <= top_k of them (nothing to prune, no API call).
     """
-    top_k = top_k or config.RETRIEVE_TOP_K
-    names = [m[0] for m in _table_meta(db_id)]
-    if len(names) <= top_k:
-        return names
-    qvec = _embed([f"{question}\n{evidence}".strip()], "RETRIEVAL_QUERY")[0]
-    scored = sorted(
-        zip(names, _doc_embeddings(db_id)), key=lambda nv: _cosine(qvec, nv[1]), reverse=True
-    )
-    return [n for n, _ in scored[:top_k]]
+    return [n for n, _ in retrieve_scored(question, evidence, db_id, top_k)]
 
 
 def _prune(meta: tuple[tuple[str, str, str], ...], tables: list[str]) -> str:
@@ -125,6 +143,11 @@ def _selfcheck():
 
     assert abs(_cosine([1, 0], [1, 0]) - 1.0) < 1e-9
     assert abs(_cosine([1, 0], [0, 1])) < 1e-9
+
+    # ranking + scores (the signal the gate consumes) — pure, no embedding call
+    sc = _top_scored([1, 0], ["x", "y", "z"], [[1, 0], [0, 1], [0.9, 0.1]], 2)
+    assert [n for n, _ in sc] == ["x", "z"], sc
+    assert sc[0][1] == 1.0 and 0 < sc[1][1] < 1.0, sc
 
     os.remove(path)
     print("retriever selfcheck ok")

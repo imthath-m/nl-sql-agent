@@ -23,6 +23,10 @@ RETRIEVE_TOP_K = int(os.environ.get("NLSQL_RETRIEVE_TOP_K", "5"))
 # Phase-4 LLM judge: frontier model, run offline only (per plan.md model strategy).
 JUDGE_MODEL = os.environ.get("NLSQL_JUDGE_MODEL", "gemini-2.5-pro")
 
+# Phase-5 abstention gate: refuse when overall confidence falls below this threshold.
+# Our addition — BIRD does not reward abstention (see README).
+ABSTAIN_THRESHOLD = float(os.environ.get("NLSQL_ABSTAIN_THRESHOLD", "0.55"))
+
 
 def db_path(db_id: str) -> Path:
     return DB_ROOT / db_id / f"{db_id}.sqlite"
