@@ -13,9 +13,21 @@ def load_examples() -> list[dict]:
         return json.load(f)
 
 
+def _subset_idx(total: int, n: int, seed: int) -> list[int]:
+    return sorted(random.Random(seed).sample(range(total), min(n, total)))
+
+
 def smoke_subset(examples: list[dict], n: int = 50, seed: int = 0) -> list[dict]:
     """Deterministic n-example smoke subset. Seed fixed so the baseline is reproducible."""
-    idx = sorted(random.Random(seed).sample(range(len(examples)), n))
+    return [examples[i] for i in _subset_idx(len(examples), n, seed)]
+
+
+def gate_split(examples: list[dict], n: int = 100, seed: int = 5) -> list[dict]:
+    """Held-out split for the abstention gate: deterministic n-example sample drawn
+    disjoint from `smoke_subset(seed=0, n=50)`, so the gate is never tuned on the smoke set."""
+    used = set(_subset_idx(len(examples), 50, 0))
+    pool = [i for i in range(len(examples)) if i not in used]
+    idx = sorted(random.Random(seed).sample(pool, min(n, len(pool))))
     return [examples[i] for i in idx]
 
 
