@@ -10,7 +10,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
-from . import bird, config, loop, score
+from . import agent, bird, config, cost, loop, score
 
 
 def _one(ex: dict, model: str, max_repairs: int) -> dict:
@@ -22,6 +22,8 @@ def _one(ex: dict, model: str, max_repairs: int) -> dict:
         "question": ex["question"],
         "gold": ex["SQL"],
     }
+    agent.reset_usage()
+    t0 = time.time()
     try:
         sol = loop.solve(ex["question"], ex.get("evidence", ""), ex["db_id"], max_repairs, model)
         row["pred"] = sol.sql
@@ -35,6 +37,8 @@ def _one(ex: dict, model: str, max_repairs: int) -> dict:
         row["pred"] = ""
         row["ex"] = 0
         row["error"] = str(e)
+    row["latency_s"] = round(time.time() - t0, 3)
+    row.update(agent.get_usage())
     return row
 
 
@@ -86,7 +90,9 @@ def main() -> None:
         rows = list(pool.map(lambda ex: _one(ex, args.model, args.max_repairs), subset))
     elapsed = round(time.time() - t0, 1)
 
-    summary = _summary(rows) | {"model": args.model, "elapsed_s": elapsed}
+    summary = _summary(rows) | {
+        "model": args.model, "elapsed_s": elapsed, "cost": cost.run_cost(rows, args.model),
+    }
     errors = sum("error" in r for r in rows)
 
     baseline_ex = _last_baseline_ex()

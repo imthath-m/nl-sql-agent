@@ -12,7 +12,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
-from . import bird, config, loop, score
+from . import agent, bird, config, cost, loop, score
 
 
 def _one(ex: dict, model: str, max_repairs: int, top_k: int, use_planner: bool) -> dict:
@@ -24,6 +24,8 @@ def _one(ex: dict, model: str, max_repairs: int, top_k: int, use_planner: bool) 
         "question": ex["question"],
         "gold": ex["SQL"],
     }
+    agent.reset_usage()
+    t0 = time.time()
     try:
         sol = loop.solve(
             ex["question"], ex.get("evidence", ""), ex["db_id"], max_repairs, model,
@@ -42,6 +44,8 @@ def _one(ex: dict, model: str, max_repairs: int, top_k: int, use_planner: bool) 
         row["pred"] = ""
         row["ex"] = 0
         row["error"] = str(e)
+    row["latency_s"] = round(time.time() - t0, 3)
+    row.update(agent.get_usage())
     return row
 
 
@@ -102,6 +106,7 @@ def main() -> None:
 
     summary = _summary(rows) | {
         "model": args.model, "top_k": args.top_k, "planner": args.plan, "elapsed_s": elapsed,
+        "cost": cost.run_cost(rows, args.model),
     }
     errors = sum("error" in r for r in rows)
 

@@ -9,7 +9,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
-from . import agent, bird, config, score
+from . import agent, bird, config, cost, score
 
 
 def _one(ex: dict, model: str) -> dict:
@@ -21,6 +21,8 @@ def _one(ex: dict, model: str) -> dict:
         "question": ex["question"],
         "gold": ex["SQL"],
     }
+    agent.reset_usage()
+    t0 = time.time()
     try:
         pred = agent.generate_sql(ex["question"], ex.get("evidence", ""), bird.schema_ddl(ex["db_id"]), model)
         row["pred"] = pred
@@ -29,6 +31,8 @@ def _one(ex: dict, model: str) -> dict:
         row["pred"] = ""
         row["ex"] = 0
         row["error"] = str(e)
+    row["latency_s"] = round(time.time() - t0, 3)
+    row.update(agent.get_usage())
     return row
 
 
@@ -61,7 +65,9 @@ def main() -> None:
         rows = list(pool.map(lambda ex: _one(ex, args.model), subset))
     elapsed = round(time.time() - t0, 1)
 
-    summary = _summary(rows) | {"model": args.model, "elapsed_s": elapsed}
+    summary = _summary(rows) | {
+        "model": args.model, "elapsed_s": elapsed, "cost": cost.run_cost(rows, args.model),
+    }
     errors = sum("error" in r for r in rows)
 
     config.RUNS_DIR.mkdir(exist_ok=True)
