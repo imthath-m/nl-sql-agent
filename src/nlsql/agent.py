@@ -17,6 +17,34 @@ from . import config
 _client: genai.Client | None = None
 _client_lock = threading.Lock()  # ponytail: serialize lazy init; concurrent workers else build+GC-close duplicate clients
 
+# Per-thread token accounting so the runners can attribute cost/latency per example
+# (each example is solved on one worker thread). Opt-in: reset before an example,
+# read after. When unused it just accumulates harmlessly.
+_usage = threading.local()
+
+
+def reset_usage() -> None:
+    _usage.prompt = 0
+    _usage.output = 0
+    _usage.calls = 0
+
+
+def get_usage() -> dict:
+    """Tokens + LLM calls recorded on this thread since the last reset_usage()."""
+    return {
+        "prompt_tokens": getattr(_usage, "prompt", 0),
+        "output_tokens": getattr(_usage, "output", 0),
+        "llm_calls": getattr(_usage, "calls", 0),
+    }
+
+
+def _record_usage(resp) -> None:
+    um = getattr(resp, "usage_metadata", None)
+    _usage.calls = getattr(_usage, "calls", 0) + 1
+    if um is not None:
+        _usage.prompt = getattr(_usage, "prompt", 0) + (um.prompt_token_count or 0)
+        _usage.output = getattr(_usage, "output", 0) + (um.candidates_token_count or 0)
+
 PROMPT = """You are an expert SQLite analyst. Write ONE SQLite query that answers the question.
 
 Database schema:
@@ -78,6 +106,7 @@ def _complete(prompt: str, model: str | None, retries: int = 3) -> str:
             resp = _get_client().models.generate_content(
                 model=model or config.MODEL, contents=prompt
             )
+            _record_usage(resp)
             return _strip_fence(resp.text or "")
         except Exception as e:  # transient API/rate-limit errors -> backoff and retry
             last_err = e
