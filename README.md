@@ -56,6 +56,16 @@ An **Abstention-Gate** that refuses low-confidence answers and routes them to a 
 
 Everything ships a `_selfcheck` and needs no API/data. Run `run_phase5` later on the user's machine for live gate numbers.
 
+## Phase 6 — status: built (auditability; traces + review view, offline)
+
+Every pipeline step is now recorded as a trace, and a thin static **review view** renders those traces low-confidence-first — so an auditor can open one HTML file and follow each answer back through its SQL to the schema it was written against.
+
+- **Trace** (`trace.Trace`) records the pipeline's steps in order — retrieve → plan → generate → execute → (repair → execute)* → explain → gate — each with a name, a compact summary of inputs/outputs, latency, and a timestamp. It also stores the explicit audit link: **answer → final SQL → retrieved schema** (kept tables + the pruned DDL that SQL was written against). Everything is stored as short summaries (long strings capped), never full prompts, so a trace embeds inside the run file next to its result row.
+- `loop.solve(..., trace=True)` builds one trace per example and attaches `Trace.to_dict()` to the `Solution.trace` field. Opt-in and backward-compatible — the default (`trace=False`) leaves `Solution.trace` `None` and reproduces phases 2–5 exactly. `run_phase5` now captures traces per example (`row["trace"]`).
+- **Review view** (`review.render` → `runs/review_<ts>.html`) turns a run file into a single self-contained HTML page — no web framework, no new dependencies, inline CSS, only the native `<details>` toggle. Examples are sorted **ascending by gate confidence (lowest first)**, so refusals and shaky answers surface at the top; un-scored rows sort last. Each row expands to show the step trace, the final SQL, the retrieved tables + pruned schema, the confidence signals + abstention decision, and the plain-language answer. It consumes run/trace JSON offline and tolerates partial rows.
+
+Everything ships a `_selfcheck` and needs no API/data. Generate a page from any run file with `python -m nlsql.review runs/phase5_<ts>.json`.
+
 ## Layout
 
 - `bird-data/` and `bird-sql/` live in the **parent** dir (kept out of this repo — data is 700MB).
@@ -78,7 +88,7 @@ Everything ships a `_selfcheck` and needs no API/data. Run `run_phase5` later on
 | `retriever.retrieve_scored(question, evidence, db_id, top_k=5)` | → `(name, cosine)` pairs for the kept tables (the gate's input). Pass-through schemas (`<= top_k`) score 1.0. |
 | `retriever.retrieve_schema(question, evidence, db_id, top_k=5)` | → `(kept table names, pruned CREATE-statement DDL)` for those tables. |
 | `planner.plan(question, evidence, schema_ddl)` | → 2–6 ordered plain-language steps for building the query. One Gemini call, no SQL. |
-| `loop.solve(question, evidence, db_id, max_repairs=3, retrieve_top_k=None, use_planner=False, use_gate=False, abstain_threshold=None)` | → `Solution` (final sql, exec result, attempts, per-attempt sqls/errors, explanation, retrieved `tables`, `plan`, `retrieval_scores`, and — when `use_gate` — `confidence`/`abstained`/`abstain_reason`/`gate_signals`). Defaults = phase-2 loop; set `retrieve_top_k`/`use_planner`/`use_gate` for phases 3/5. |
+| `loop.solve(question, evidence, db_id, max_repairs=3, retrieve_top_k=None, use_planner=False, use_gate=False, abstain_threshold=None, trace=False)` | → `Solution` (final sql, exec result, attempts, per-attempt sqls/errors, explanation, retrieved `tables`, `plan`, `retrieval_scores`, and — when `use_gate` — `confidence`/`abstained`/`abstain_reason`/`gate_signals`; when `trace` — the phase-6 `trace`). Defaults = phase-2 loop; set `retrieve_top_k`/`use_planner`/`use_gate`/`trace` for phases 3/5/6. |
 | `bird.gate_split(examples, n=100, seed=5)` | → deterministic n-example held-out split, disjoint from `smoke_subset` — the gate's eval set. |
 | `score.ex_score(pred, gold, db_path)` | → 1 if result sets match, else 0. Mirrors official BIRD EX (error/timeout → 0). |
 | `schema_link.tables_in_sql(sql)` | → lower-cased set of tables the query references (FROM + JOINs, comma joins, aliases, subqueries). |
@@ -96,6 +106,10 @@ Everything ships a `_selfcheck` and needs no API/data. Run `run_phase5` later on
 | `gate_eval.metrics(rows, threshold=None)` | → false-refusal / caught-error / abstention rate + served accuracy. `threshold=None` uses recorded decisions; a number recomputes from recorded `confidence`. |
 | `gate_eval.sweep(rows, thresholds=None)` | → `metrics` recomputed across a threshold grid (default 0.0–1.0) from the recorded confidences — offline operating-point tuning. |
 | `agent.reset_usage()` / `agent.get_usage()` | thread-local token/call counter so the runners attribute cost per example. |
+| `trace.Trace.step(name, inputs)` | context manager that times one pipeline step and appends a `Step` (name, summarized inputs/output, latency, timestamp) to the trace. |
+| `trace.Trace.link(answer, sql, tables, ddl)` | records the answer → final SQL → retrieved schema audit chain; `Trace.to_dict()` serializes steps + link to JSON. |
+| `review.sort_rows(rows)` | run rows sorted ascending by gate `confidence` (lowest first, un-scored last). |
+| `review.render(run)` | → a self-contained HTML review page (trace + SQL + retrieved schema + confidence + decision + answer per example), low-confidence-first. Offline. |
 
 ## Run
 
@@ -115,6 +129,7 @@ cd src
 ../.venv/bin/python -m nlsql.run_phase5              # phase 5: abstention gate on its held-out split
 ../.venv/bin/python -m nlsql.run_phase5 --threshold 0.6   # override the abstain threshold
 ../.venv/bin/python -m nlsql.gate_eval runs/phase5_<ts>.json   # phase 5: false-refusal / caught-error + threshold sweep (offline)
+../.venv/bin/python -m nlsql.review runs/phase5_<ts>.json   # phase 6: static HTML review view, low-confidence-first (offline)
 ../.venv/bin/python -m nlsql.score                   # scorer self-check (no API/data needed)
 ../.venv/bin/python -m nlsql.executor                # executor self-check (no API/data needed)
 ../.venv/bin/python -m nlsql.retriever               # retriever self-check (no API/data needed)
@@ -128,9 +143,11 @@ cd src
 ../.venv/bin/python -m nlsql.gate                    # abstention-gate self-check (no API/data needed)
 ../.venv/bin/python -m nlsql.gate_eval _selfcheck    # gate-eval self-check (no API/data needed)
 ../.venv/bin/python -m nlsql.run_phase5 _selfcheck   # gate-split self-check (no API/data needed)
+../.venv/bin/python -m nlsql.trace                   # trace self-check (no API/data needed)
+../.venv/bin/python -m nlsql.review _selfcheck       # review-view self-check (no API/data needed)
 ```
 
-Outputs land in `runs/baseline_<ts>.json` / `runs/loop_<ts>.json` / `runs/phase3_<ts>.json` / `runs/phase5_<ts>.json` (per-example gold/pred/EX + latency/tokens + summary; phase 5 also records per-example gate `confidence` + `abstain`) and append to `runs/scores.log` (tagged `mode: baseline` / `mode: loop` / `mode: phase3` / `mode: phase5`). `run_eval` writes `runs/eval_<ts>.json`; `gate_eval` writes `runs/gate_eval_<ts>.json`.
+Outputs land in `runs/baseline_<ts>.json` / `runs/loop_<ts>.json` / `runs/phase3_<ts>.json` / `runs/phase5_<ts>.json` (per-example gold/pred/EX + latency/tokens + summary; phase 5 also records per-example gate `confidence` + `abstain`) and append to `runs/scores.log` (tagged `mode: baseline` / `mode: loop` / `mode: phase3` / `mode: phase5`). `run_eval` writes `runs/eval_<ts>.json`; `gate_eval` writes `runs/gate_eval_<ts>.json`. Phase-5 run rows also embed a per-example step `trace`; `review` renders any run file into `runs/review_<ts>.html`.
 
 ## Data setup (already done locally)
 

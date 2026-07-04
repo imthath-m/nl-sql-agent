@@ -35,7 +35,7 @@ def _one(ex: dict, model: str, max_repairs: int, top_k: int, use_planner: bool,
         sol = loop.solve(
             ex["question"], ex.get("evidence", ""), ex["db_id"], max_repairs, model,
             retrieve_top_k=top_k, use_planner=use_planner,
-            use_gate=True, abstain_threshold=threshold,
+            use_gate=True, abstain_threshold=threshold, trace=True,
         )
         row["pred"] = sol.sql
         row["attempts"] = sol.attempts
@@ -50,6 +50,7 @@ def _one(ex: dict, model: str, max_repairs: int, top_k: int, use_planner: bool,
         row["abstain"] = sol.abstained
         row["gate_reason"] = sol.abstain_reason
         row["gate_signals"] = sol.gate_signals
+        row["trace"] = sol.trace  # phase-6 step trace (answer -> sql -> retrieved schema)
         row["ex"] = score.ex_score(sol.sql, ex["SQL"], str(config.db_path(ex["db_id"])))
     except Exception as e:
         row["pred"] = ""
