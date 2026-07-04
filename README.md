@@ -66,11 +66,25 @@ Every pipeline step is now recorded as a trace, and a thin static **review view*
 
 Everything ships a `_selfcheck` and needs no API/data. Generate a page from any run file with `python -m nlsql.review runs/phase5_<ts>.json`.
 
+## Phase 7 — status: built (Spider 2.0-Lite port; runs offline in self-check, live on the user's machine)
+
+The same harness, ported to **Spider 2.0-Lite** — a harder benchmark whose databases live on **BigQuery** and **Snowflake** (plus some local SQLite), whose tables can carry **1,000+ columns**, and which releases **gold result tables (CSV)** rather than locally-runnable gold SQL. The pipeline, dialect prompts, and wide-schema pruning run; scoring compares result tables against the released gold CSVs. Live warehouse execution is the user's concern (optional clients + credentials); everything else self-checks on synthetic fixtures with no API/data/warehouse.
+
+- **Spider2 loader** (`spider2.py`, the Spider2 analogue of `bird.py`) reads the cloned `spider2-lite/` layout: examples from `spider2-lite.jsonl` (`instance_id` / `db` / `question` / `external_knowledge`), gold SQL from `evaluation_suite/gold/sql/`, gold result CSVs from `evaluation_suite/gold/exec_result/`, and per-table schema descriptors from `resource/databases/<platform>/<db>/**.json`. Platform (bigquery/snowflake/sqlite) is inferred from the instance-id prefix; missing files raise clear errors. A deterministic `held_in_split` mirrors `bird.smoke_subset`. Date-sharded tables that share a column signature (e.g. GA4 `events_YYYYMMDD`) collapse to one representative so the prompt is not flooded.
+- **Dialect adaptation:** `agent.generate_sql`/`repair_sql` take an optional `dialect` (`sqlite` default — phases 1-6 unchanged; `bigquery`, `snowflake` add concise dialect rules to the prompt: identifier qualification, `SAFE_CAST`/`UNNEST`, `DATEADD`/`QUALIFY`/`FLATTEN`, etc.).
+- **Wide-schema pruning** (`wide_schema.py`) extends the retriever idea from tables to **columns**: any table above `NLSQL_COL_BUDGET` (default 40) columns is cut to the columns most relevant to the question by lexical token overlap (deterministic; degrades to the first N columns with no hits), then rendered to DDL. Lexical by default so the self-check needs no API.
+- **Result scorer** (`spider2_score.py`) mirrors Spider2's evaluator: compare a predicted result table against the gold CSV **order-insensitively** (columns as multisets), **column-subset** (every gold column must be matched by a distinct predicted column; extra predicted columns are allowed), with **float tolerance** and CSV-text/native-type normalization.
+- **Warehouse adapter** (`warehouse.py`) routes execution by platform: SQLite runs locally through `executor.py`; BigQuery/Snowflake use optional clients (`google-cloud-bigquery` / `snowflake-connector-python`, **not** in `requirements.txt`) reading credentials from env, and raise `WarehouseUnavailable` with an actionable message when the client or credentials are absent.
+- **Runner** (`run_spider2.py`) runs the held-in split: build the dialect schema (wide tables pruned) → plan → generate → execute → repair → explain → gate, scoring EX against the gold CSV. Its run rows carry the fields the **phase-4 eval suite reuses** (question, pred/gold SQL, ex, error, latency, tokens, retrieved tables, confidence) and it logs `mode: spider2` to `scores.log`. Planner, gate, and trace are reused unchanged (they are schema-text based).
+
+Everything ships a `_selfcheck` and needs no API/data/warehouse. Run `run_spider2` on the user's machine (after the Spider2 clone) for the first Spider 2.0-Lite score; `--platform sqlite` runs the locally-executable slice without any warehouse credentials.
+
 ## Layout
 
 - `bird-data/` and `bird-sql/` live in the **parent** dir (kept out of this repo — data is 700MB).
   - `bird-data/dev_20240627/` — BIRD dev set (1534 examples, 11 SQLite DBs, gold SQL).
   - `bird-sql/` — cloned BIRD-SQL repo (official evaluation scripts, reference).
+  - `Spider2/spider2-lite/` — cloned xlang-ai/Spider2 (phase 7): examples, gold SQL + result CSVs, per-DB schema descriptors, local SQLite DBs. Override with `SPIDER2_DIR`.
 - `src/nlsql/` — the agent.
 
 ## Component contracts
@@ -80,8 +94,8 @@ Everything ships a `_selfcheck` and needs no API/data. Generate a page from any 
 | `bird.load_examples()` | → list of dev examples (`question`, `evidence`, `SQL`, `db_id`, `difficulty`). |
 | `bird.smoke_subset(examples, n=50)` | → deterministic (seed=0) n-example subset. |
 | `bird.schema_ddl(db_id)` | → `CREATE` statements for the DB (the schema handed to the agent). |
-| `agent.generate_sql(question, evidence, schema_ddl, plan=None)` | → one SQLite string. Single Gemini call, no execution. Optional phase-3 `plan` (list of steps) is injected into the prompt. |
-| `agent.repair_sql(question, evidence, schema_ddl, prev_sql, error)` | → corrected SQL, given the failed query and its DB error. |
+| `agent.generate_sql(question, evidence, schema_ddl, plan=None, dialect="sqlite")` | → one SQL string. Single Gemini call, no execution. Optional phase-3 `plan` (steps) is injected; phase-7 `dialect` (`sqlite`/`bigquery`/`snowflake`) parameterizes the prompt (`sqlite` = phases 1-6 unchanged). |
+| `agent.repair_sql(question, evidence, schema_ddl, prev_sql, error, dialect="sqlite")` | → corrected SQL, given the failed query and its DB error; same dialect param. |
 | `executor.execute(sql, db_path)` | → `ExecResult(ok, rows, error)`. Never raises; failure → `ok=False` with the error string. |
 | `explainer.explain(question, rows)` | → one plain-language sentence answering the question from the result rows. |
 | `retriever.retrieve(question, evidence, db_id, top_k=5)` | → the `top_k` table names most relevant to the question, by embedding cosine similarity. Returns all tables when the schema has `<= top_k`. |
@@ -110,6 +124,15 @@ Everything ships a `_selfcheck` and needs no API/data. Generate a page from any 
 | `trace.Trace.link(answer, sql, tables, ddl)` | records the answer → final SQL → retrieved schema audit chain; `Trace.to_dict()` serializes steps + link to JSON. |
 | `review.sort_rows(rows)` | run rows sorted ascending by gate `confidence` (lowest first, un-scored last). |
 | `review.render(run)` | → a self-contained HTML review page (trace + SQL + retrieved schema + confidence + decision + answer per example), low-confidence-first. Offline. |
+| `spider2.load_examples()` | → Spider2-Lite examples (`instance_id`, `db`, `question`, `external_knowledge`), each tagged with its `platform`. |
+| `spider2.held_in_split(examples, n=50, seed=0)` | → deterministic n-example held-in split (like `bird.smoke_subset`). |
+| `spider2.schema_ddl(db, platform, question="", evidence="", col_budget=None)` | → CREATE-TABLE-ish DDL for the generator, wide tables column-pruned via `wide_schema`. |
+| `spider2.gold_sql(id)` / `spider2.gold_result_path(id)` / `spider2.external_knowledge(ex)` / `spider2.sqlite_path(db)` | → gold dialect SQL / gold result-CSV path / external-knowledge doc text / local SQLite file. |
+| `wide_schema.prune(tables, question, evidence="", budget=40)` | → each table's columns cut to `budget`, most-relevant-first by lexical overlap (deterministic). `tables` = `[(name, [(col, type), …]), …]`. |
+| `wide_schema.to_ddl(tables)` | → render pruned tables as CREATE-TABLE text. |
+| `spider2_score.compare(pred_rows, gold_rows, tol=1e-2)` | → 1 if every gold column is matched by a distinct predicted column (order-insensitive, float-tolerant, column-subset), else 0. |
+| `spider2_score.score_csv(pred_rows, gold_csv_path, tol=1e-2)` | → `compare` against a gold exec_result CSV file. |
+| `warehouse.execute(sql, example)` | → `executor.ExecResult`, routed by `example["platform"]`: SQLite runs locally; BigQuery/Snowflake need the optional client + creds, else raise `WarehouseUnavailable`. |
 
 ## Run
 
@@ -130,6 +153,9 @@ cd src
 ../.venv/bin/python -m nlsql.run_phase5 --threshold 0.6   # override the abstain threshold
 ../.venv/bin/python -m nlsql.gate_eval runs/phase5_<ts>.json   # phase 5: false-refusal / caught-error + threshold sweep (offline)
 ../.venv/bin/python -m nlsql.review runs/phase5_<ts>.json   # phase 6: static HTML review view, low-confidence-first (offline)
+../.venv/bin/python -m nlsql.run_spider2             # phase 7: Spider 2.0-Lite held-in split (needs the Spider2 clone + API; warehouse creds for bq/sf)
+../.venv/bin/python -m nlsql.run_spider2 --platform sqlite   # phase 7: only the locally-executable slice (no warehouse creds)
+../.venv/bin/python -m nlsql.run_eval runs/spider2_<ts>.json   # phase 4 eval suite, reused over a Spider2 run file (offline)
 ../.venv/bin/python -m nlsql.score                   # scorer self-check (no API/data needed)
 ../.venv/bin/python -m nlsql.executor                # executor self-check (no API/data needed)
 ../.venv/bin/python -m nlsql.retriever               # retriever self-check (no API/data needed)
@@ -145,17 +171,28 @@ cd src
 ../.venv/bin/python -m nlsql.run_phase5 _selfcheck   # gate-split self-check (no API/data needed)
 ../.venv/bin/python -m nlsql.trace                   # trace self-check (no API/data needed)
 ../.venv/bin/python -m nlsql.review _selfcheck       # review-view self-check (no API/data needed)
+../.venv/bin/python -m nlsql.wide_schema             # phase 7: wide-schema column-pruner self-check (no API/data needed)
+../.venv/bin/python -m nlsql.spider2_score           # phase 7: result-CSV scorer self-check (no API/data needed)
+../.venv/bin/python -m nlsql.spider2 _selfcheck      # phase 7: Spider2 loader self-check on synthetic fixtures (no API/data needed)
+../.venv/bin/python -m nlsql.warehouse               # phase 7: warehouse-adapter self-check (no API/data needed)
+../.venv/bin/python -m nlsql.run_spider2 _selfcheck  # phase 7: end-to-end pipeline self-check on fixtures (no API/data needed)
 ```
 
-Outputs land in `runs/baseline_<ts>.json` / `runs/loop_<ts>.json` / `runs/phase3_<ts>.json` / `runs/phase5_<ts>.json` (per-example gold/pred/EX + latency/tokens + summary; phase 5 also records per-example gate `confidence` + `abstain`) and append to `runs/scores.log` (tagged `mode: baseline` / `mode: loop` / `mode: phase3` / `mode: phase5`). `run_eval` writes `runs/eval_<ts>.json`; `gate_eval` writes `runs/gate_eval_<ts>.json`. Phase-5 run rows also embed a per-example step `trace`; `review` renders any run file into `runs/review_<ts>.html`.
+Outputs land in `runs/baseline_<ts>.json` / `runs/loop_<ts>.json` / `runs/phase3_<ts>.json` / `runs/phase5_<ts>.json` / `runs/spider2_<ts>.json` (per-example gold/pred/EX + latency/tokens + summary; phase 5 also records per-example gate `confidence` + `abstain`) and append to `runs/scores.log` (tagged `mode: baseline` / `mode: loop` / `mode: phase3` / `mode: phase5` / `mode: spider2`). `run_eval` writes `runs/eval_<ts>.json`; `gate_eval` writes `runs/gate_eval_<ts>.json`. Phase-5/7 run rows also embed a per-example step `trace`; `review` renders any run file into `runs/review_<ts>.html`.
 
 ## Data setup (already done locally)
 
 ```bash
-# from the parent dir:
+# from the parent dir — BIRD (phases 1-6):
 git clone --depth 1 https://github.com/bird-bench/mini_dev.git bird-sql
 curl -sL https://bird-bench.oss-cn-beijing.aliyuncs.com/dev.zip -o bird-data/dev.zip
 cd bird-data && unzip -q dev.zip && cd dev_20240627 && unzip -q dev_databases.zip
+
+# from the parent dir — Spider 2.0-Lite (phase 7):
+git clone --depth 1 https://github.com/xlang-ai/Spider2.git Spider2
+# examples + gold + schema resources ship in the repo; SPIDER2_DIR defaults to
+# ../Spider2/spider2-lite. Live BigQuery/Snowflake execution is optional (see Notes) —
+# `run_spider2 --platform sqlite` scores the local slice with no warehouse credentials.
 ```
 
 ## Notes
@@ -165,4 +202,5 @@ cd bird-data && unzip -q dev.zip && cd dev_20240627 && unzip -q dev_databases.zi
 - Embeddings and the LLM share one google-genai client; credentials are the same. Set `NLSQL_EMBED_MODEL` / `NLSQL_RETRIEVE_TOP_K` to override the retriever defaults.
 - Phase-4 knobs: `NLSQL_JUDGE_MODEL` (default `gemini-2.5-pro`, frontier/offline) picks the judge; `NLSQL_PRICES` (JSON `{"model": {"input": usd, "output": usd}}` per 1M tokens) overrides the cost table.
 - Phase-5 knob: `NLSQL_ABSTAIN_THRESHOLD` (default `0.55`) sets the confidence below which the gate refuses. The gate is our addition — BIRD does not reward abstention — so it is scored on its own held-out split (`bird.gate_split`) with false-refusal / caught-error, not against EX.
+- Phase-7 knobs: `SPIDER2_DIR` points at the cloned `spider2-lite/` dir; `NLSQL_COL_BUDGET` (default 40) caps columns per table in the wide-schema pruner. Warehouse execution is optional — install `google-cloud-bigquery` / `snowflake-connector-python` (kept out of `requirements.txt`) and set `GOOGLE_CLOUD_PROJECT` (BigQuery, + ADC) or `SNOWFLAKE_ACCOUNT`/`SNOWFLAKE_USER`/`SNOWFLAKE_PASSWORD` (Snowflake). Without them, bigquery/snowflake examples record a clear "credentials required" error; SQLite examples always run locally. EX is scored against the released gold-result CSVs (`spider2_score`), so a live warehouse is not required to get a Spider2-Lite score on the SQLite slice.
 - ADK is still deferred. The phase-3 planner *decomposes* the question in a single up-front call — it does not choose tools or branch — so the whole pipeline (retrieve → plan → generate → execute → repair) stays a *fixed* plain-Python loop: cheaper and directly testable (each component ships a `_selfcheck`). ADK earns its place only once the agent actually selects steps at runtime.
