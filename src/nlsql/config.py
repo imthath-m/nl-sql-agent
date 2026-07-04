@@ -27,6 +27,12 @@ JUDGE_MODEL = os.environ.get("NLSQL_JUDGE_MODEL", "gemini-2.5-pro")
 # Our addition — BIRD does not reward abstention (see README).
 ABSTAIN_THRESHOLD = float(os.environ.get("NLSQL_ABSTAIN_THRESHOLD", "0.55"))
 
+# Phase-7 Spider 2.0-Lite. The cloned xlang-ai/Spider2 repo's spider2-lite/ dir lives one
+# level up by default (alongside bird-data/), overridable by env. COL_BUDGET caps columns
+# per table for the wide-schema pruner (Spider2 tables can exceed 1,000 columns).
+SPIDER2_DIR = Path(os.environ.get("SPIDER2_DIR", REPO_ROOT.parent / "Spider2" / "spider2-lite"))
+SPIDER2_COL_BUDGET = int(os.environ.get("NLSQL_COL_BUDGET", "40"))
+
 
 def db_path(db_id: str) -> Path:
     return DB_ROOT / db_id / f"{db_id}.sqlite"

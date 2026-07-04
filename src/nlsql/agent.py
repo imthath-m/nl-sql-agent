@@ -45,7 +45,34 @@ def _record_usage(resp) -> None:
         _usage.prompt = getattr(_usage, "prompt", 0) + (um.prompt_token_count or 0)
         _usage.output = getattr(_usage, "output", 0) + (um.candidates_token_count or 0)
 
-PROMPT = """You are an expert SQLite analyst. Write ONE SQLite query that answers the question.
+# Dialect adaptation (phase 7). `sqlite` is the default and keeps phases 1-6 byte-identical
+# (empty rules block). `bigquery`/`snowflake` add concise dialect-specific guidance for the
+# Spider 2.0-Lite port. `dialect_name` labels the analyst; `dialect_rules` is appended to Rules.
+_DIALECT_NAME = {
+    "sqlite": "SQLite",
+    "bigquery": "BigQuery GoogleSQL",
+    "snowflake": "Snowflake SQL",
+}
+_DIALECT_RULES = {
+    "sqlite": "",
+    "bigquery": (
+        "- This is BigQuery GoogleSQL. Reference tables as `project.dataset.table` in backticks.\n"
+        "- Use SAFE_CAST, EXTRACT(part FROM ts), DATE_SUB/DATE_DIFF, and UNNEST() for ARRAY/STRUCT fields.\n"
+        "- Prefer standard SQL functions; there is no SQLite-style `strftime` or `||`-only concat (use CONCAT).\n"
+    ),
+    "snowflake": (
+        "- This is Snowflake SQL. Reference tables as DATABASE.SCHEMA.TABLE; identifiers are case-insensitive.\n"
+        "- Use DATEADD/DATEDIFF, TO_DATE/TO_TIMESTAMP, ILIKE, QUALIFY, and FLATTEN() for semi-structured fields.\n"
+    ),
+}
+
+
+def _dialect_bits(dialect: str) -> tuple[str, str]:
+    """(display name, extra rules block) for a dialect key; falls back to SQLite."""
+    return _DIALECT_NAME.get(dialect, "SQLite"), _DIALECT_RULES.get(dialect, "")
+
+
+PROMPT = """You are an expert {dialect} analyst. Write ONE {dialect} query that answers the question.
 
 Database schema:
 {schema}
@@ -58,9 +85,9 @@ Rules:
 - Output ONLY the SQL query. No prose, no markdown, no code fences.
 - Use exact table/column names from the schema; quote names with spaces in backticks.
 - Return only the columns the question asks for.
-"""
+{dialect_rules}"""
 
-REPAIR_PROMPT = """Your previous SQLite query failed to run. Fix it.
+REPAIR_PROMPT = """Your previous {dialect} query failed to run. Fix it.
 
 Database schema:
 {schema}
@@ -79,7 +106,7 @@ Rules:
 - Output ONLY the corrected SQL query. No prose, no markdown, no code fences.
 - Use exact table/column names from the schema; quote names with spaces in backticks.
 - Return only the columns the question asks for.
-"""
+{dialect_rules}"""
 
 
 def _get_client() -> genai.Client:
@@ -142,12 +169,16 @@ def generate_sql(
     model: str | None = None,
     retries: int = 3,
     plan: list[str] | None = None,
+    dialect: str = "sqlite",
 ) -> str:
+    name, rules = _dialect_bits(dialect)
     prompt = PROMPT.format(
+        dialect=name,
         schema=schema_ddl,
         evidence=evidence or "(none)",
         question=question,
         plan=_plan_block(plan),
+        dialect_rules=rules,
     )
     return _complete(prompt, model, retries)
 
@@ -160,13 +191,17 @@ def repair_sql(
     error: str,
     model: str | None = None,
     retries: int = 3,
+    dialect: str = "sqlite",
 ) -> str:
     """Re-generate the SQL given the query that failed and the DB's error message."""
+    name, rules = _dialect_bits(dialect)
     prompt = REPAIR_PROMPT.format(
+        dialect=name,
         schema=schema_ddl,
         evidence=evidence or "(none)",
         question=question,
         prev_sql=prev_sql,
         error=error,
+        dialect_rules=rules,
     )
     return _complete(prompt, model, retries)
