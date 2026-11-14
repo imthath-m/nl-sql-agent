@@ -3,3 +3,5 @@ __pycache__/
 .env
 runs/
 .venv/
+results/**/*.rows.jsonl
+.cache/
