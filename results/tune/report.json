@@ -1,0 +1,387 @@
+{
+  "command": "python -m nlsql.tune --dev 100 --heldout 200 --seed 13 --workers 4",
+  "timestamp": "2026-11-14T05:51:48+00:00",
+  "git_sha": "52f2b6bbf903f958f50f986b955fdfbc69f78a6f-dirty",
+  "seed": 13,
+  "model": "gpt-4.1-mini",
+  "provider": "openai",
+  "judge_model": "gpt-4.1",
+  "workers": 4,
+  "split": {
+    "dev_n": 100,
+    "heldout_n": 200,
+    "splits_file": "splits.json"
+  },
+  "dev": [
+    {
+      "prompt": "generator_v1",
+      "prompt_sha256": "68d4ae6926c124cd66f50fed54d2dd5caf4a975bd5248662bca9549fb09d7fb6",
+      "n": 100,
+      "errors": 0,
+      "ex": 58.0,
+      "ex_by_difficulty": {
+        "challenging": 50.0,
+        "moderate": 45.16,
+        "simple": 66.1
+      },
+      "counts_by_difficulty": {
+        "challenging": 10,
+        "moderate": 31,
+        "simple": 59
+      },
+      "taxonomy": {
+        "correct": 58,
+        "schema_linking": 15,
+        "wrong_aggregation": 12,
+        "wrong_filter": 6,
+        "wrong_projection": 6,
+        "join_error": 2,
+        "execution_error": 1
+      },
+      "targets": [],
+      "cost": {
+        "model": "gpt-4.1-mini",
+        "prompt_tokens": 90860,
+        "output_tokens": 5133,
+        "llm_calls": 100,
+        "est_cost_usd": 0.044557,
+        "cost_per_example_usd": 0.000446,
+        "latency_total_s": 130.5,
+        "latency_mean_s": 1.305,
+        "latency_p50_s": 0.941,
+        "latency_p95_s": 4.766
+      }
+    },
+    {
+      "prompt": "generator_v2_schema_linking",
+      "prompt_sha256": "ad1742a2fd2d88d3cb9edd121e969baf27d46e2cf36f59d6132c8e1c923a9085",
+      "n": 100,
+      "errors": 0,
+      "ex": 59.0,
+      "ex_by_difficulty": {
+        "challenging": 60.0,
+        "moderate": 51.61,
+        "simple": 62.71
+      },
+      "counts_by_difficulty": {
+        "challenging": 10,
+        "moderate": 31,
+        "simple": 59
+      },
+      "taxonomy": {
+        "correct": 59,
+        "wrong_aggregation": 15,
+        "schema_linking": 14,
+        "wrong_projection": 5,
+        "wrong_filter": 4,
+        "join_error": 2,
+        "execution_error": 1
+      },
+      "targets": [
+        "schema_linking"
+      ],
+      "cost": {
+        "model": "gpt-4.1-mini",
+        "prompt_tokens": 100860,
+        "output_tokens": 4870,
+        "llm_calls": 100,
+        "est_cost_usd": 0.048136,
+        "cost_per_example_usd": 0.000481,
+        "latency_total_s": 84.7,
+        "latency_mean_s": 0.847,
+        "latency_p50_s": 0.81,
+        "latency_p95_s": 1.237
+      }
+    },
+    {
+      "prompt": "generator_v2_aggregation",
+      "prompt_sha256": "cc17fdc85c7f08bd5f3066dcff5b168bbcad42f08a4bc92f17702910d773483a",
+      "n": 100,
+      "errors": 0,
+      "ex": 58.0,
+      "ex_by_difficulty": {
+        "challenging": 60.0,
+        "moderate": 45.16,
+        "simple": 64.41
+      },
+      "counts_by_difficulty": {
+        "challenging": 10,
+        "moderate": 31,
+        "simple": 59
+      },
+      "taxonomy": {
+        "correct": 58,
+        "wrong_aggregation": 13,
+        "schema_linking": 12,
+        "wrong_filter": 7,
+        "wrong_projection": 6,
+        "execution_error": 2,
+        "join_error": 2
+      },
+      "targets": [
+        "wrong_aggregation"
+      ],
+      "cost": {
+        "model": "gpt-4.1-mini",
+        "prompt_tokens": 106460,
+        "output_tokens": 4913,
+        "llm_calls": 100,
+        "est_cost_usd": 0.050445,
+        "cost_per_example_usd": 0.000504,
+        "latency_total_s": 87.2,
+        "latency_mean_s": 0.872,
+        "latency_p50_s": 0.841,
+        "latency_p95_s": 1.266
+      }
+    },
+    {
+      "prompt": "generator_v2_filter",
+      "prompt_sha256": "0e3fb5122abf3b694c6fb1d8d709c38d6f844a1d69bb3d32ee6a4060a2a7a4a3",
+      "n": 100,
+      "errors": 0,
+      "ex": 56.0,
+      "ex_by_difficulty": {
+        "challenging": 60.0,
+        "moderate": 51.61,
+        "simple": 57.63
+      },
+      "counts_by_difficulty": {
+        "challenging": 10,
+        "moderate": 31,
+        "simple": 59
+      },
+      "taxonomy": {
+        "correct": 56,
+        "schema_linking": 14,
+        "wrong_aggregation": 14,
+        "wrong_filter": 6,
+        "wrong_projection": 6,
+        "execution_error": 2,
+        "join_error": 2
+      },
+      "targets": [
+        "wrong_filter"
+      ],
+      "cost": {
+        "model": "gpt-4.1-mini",
+        "prompt_tokens": 100760,
+        "output_tokens": 4940,
+        "llm_calls": 100,
+        "est_cost_usd": 0.048208,
+        "cost_per_example_usd": 0.000482,
+        "latency_total_s": 91.0,
+        "latency_mean_s": 0.91,
+        "latency_p50_s": 0.843,
+        "latency_p95_s": 1.453
+      }
+    }
+  ],
+  "selection": {
+    "max_variants": 3,
+    "chosen": [
+      "generator_v2_schema_linking",
+      "generator_v2_aggregation",
+      "generator_v2_filter"
+    ],
+    "reasoning": [
+      {
+        "cause": "schema_linking",
+        "count": 15,
+        "variant": "generator_v2_schema_linking",
+        "note": "Ground each phrase in a table.column, honour evidence 'refers to' mappings, and drop tables that add no column or condition."
+      },
+      {
+        "cause": "wrong_aggregation",
+        "count": 12,
+        "variant": "generator_v2_aggregation",
+        "note": "Use evidence formulas exactly with CAST(... AS REAL) division, DISTINCT only when asked, ORDER BY ... LIMIT with NULLs excluded for superlatives."
+      },
+      {
+        "cause": "wrong_filter",
+        "count": 6,
+        "variant": "generator_v2_filter",
+        "note": "Copy filter literals verbatim from evidence/question (casing, spelling, codes) and add no unstated conditions."
+      }
+    ]
+  },
+  "winner": {
+    "name": "generator_v2_schema_linking",
+    "challenger": "generator_v2_schema_linking",
+    "beat_baseline": true,
+    "frozen_at": "2026-11-14T05:49:54+00:00",
+    "challenger_role": "winner"
+  },
+  "heldout": {
+    "runs": [
+      {
+        "prompt": "generator_v1",
+        "prompt_sha256": "68d4ae6926c124cd66f50fed54d2dd5caf4a975bd5248662bca9549fb09d7fb6",
+        "n": 200,
+        "errors": 0,
+        "ex": 49.5,
+        "ex_by_difficulty": {
+          "challenging": 53.85,
+          "moderate": 35.82,
+          "simple": 56.67
+        },
+        "counts_by_difficulty": {
+          "challenging": 13,
+          "moderate": 67,
+          "simple": 120
+        },
+        "taxonomy": {
+          "correct": 99,
+          "wrong_aggregation": 34,
+          "schema_linking": 31,
+          "wrong_projection": 14,
+          "wrong_filter": 13,
+          "join_error": 5,
+          "execution_error": 4
+        },
+        "targets": [],
+        "cost": {
+          "model": "gpt-4.1-mini",
+          "prompt_tokens": 183035,
+          "output_tokens": 9838,
+          "llm_calls": 200,
+          "est_cost_usd": 0.088955,
+          "cost_per_example_usd": 0.000445,
+          "latency_total_s": 243.2,
+          "latency_mean_s": 1.216,
+          "latency_p50_s": 0.828,
+          "latency_p95_s": 1.336
+        }
+      },
+      {
+        "prompt": "generator_v2_schema_linking",
+        "prompt_sha256": "ad1742a2fd2d88d3cb9edd121e969baf27d46e2cf36f59d6132c8e1c923a9085",
+        "n": 200,
+        "errors": 0,
+        "ex": 53.0,
+        "ex_by_difficulty": {
+          "challenging": 61.54,
+          "moderate": 38.81,
+          "simple": 60.0
+        },
+        "counts_by_difficulty": {
+          "challenging": 13,
+          "moderate": 67,
+          "simple": 120
+        },
+        "taxonomy": {
+          "correct": 106,
+          "schema_linking": 30,
+          "wrong_aggregation": 27,
+          "wrong_projection": 13,
+          "wrong_filter": 11,
+          "execution_error": 6,
+          "join_error": 5,
+          "dialect_error": 2
+        },
+        "targets": [
+          "schema_linking"
+        ],
+        "cost": {
+          "model": "gpt-4.1-mini",
+          "prompt_tokens": 203035,
+          "output_tokens": 9702,
+          "llm_calls": 200,
+          "est_cost_usd": 0.096737,
+          "cost_per_example_usd": 0.000484,
+          "latency_total_s": 181.5,
+          "latency_mean_s": 0.907,
+          "latency_p50_s": 0.81,
+          "latency_p95_s": 1.304
+        }
+      }
+    ],
+    "comparison": {
+      "n_paired": 200,
+      "baseline_ex": 49.5,
+      "challenger_ex": 53.0,
+      "delta_pp": 3.5,
+      "b_baseline_only_correct": 5,
+      "c_challenger_only_correct": 12,
+      "mcnemar_exact_p": 0.1435,
+      "bootstrap_ci95_pp": [
+        -0.5,
+        7.5
+      ],
+      "bootstrap": {
+        "n_boot": 10000,
+        "seed": 0
+      },
+      "improved_question_ids": [
+        118,
+        155,
+        315,
+        371,
+        382,
+        404,
+        599,
+        707,
+        906,
+        929,
+        1151,
+        1500
+      ],
+      "regressed_question_ids": [
+        114,
+        1296,
+        1389,
+        1442,
+        1455
+      ]
+    }
+  },
+  "cost": {
+    "dev_usd": 0.191346,
+    "heldout_usd": 0.185692,
+    "total_usd": 0.377038
+  },
+  "latency": {
+    "dev_generator_v1": {
+      "latency_mean_s": 1.305,
+      "latency_p50_s": 0.941,
+      "latency_p95_s": 4.766,
+      "latency_total_s": 130.5
+    },
+    "dev_generator_v2_schema_linking": {
+      "latency_mean_s": 0.847,
+      "latency_p50_s": 0.81,
+      "latency_p95_s": 1.237,
+      "latency_total_s": 84.7
+    },
+    "dev_generator_v2_aggregation": {
+      "latency_mean_s": 0.872,
+      "latency_p50_s": 0.841,
+      "latency_p95_s": 1.266,
+      "latency_total_s": 87.2
+    },
+    "dev_generator_v2_filter": {
+      "latency_mean_s": 0.91,
+      "latency_p50_s": 0.843,
+      "latency_p95_s": 1.453,
+      "latency_total_s": 91.0
+    },
+    "heldout_generator_v1": {
+      "latency_mean_s": 1.216,
+      "latency_p50_s": 0.828,
+      "latency_p95_s": 1.336,
+      "latency_total_s": 243.2
+    },
+    "heldout_generator_v2_schema_linking": {
+      "latency_mean_s": 0.907,
+      "latency_p50_s": 0.81,
+      "latency_p95_s": 1.304,
+      "latency_total_s": 181.5
+    }
+  },
+  "caveats": [
+    "Held-out n=200: only differences of several pp are detectable; a non-significant McNemar p is not evidence of no effect.",
+    "Single run per prompt; OpenAI generation uses temperature 0 but is still not fully deterministic, so EX has run-to-run noise of its own.",
+    "Failure causes come from the rule-based taxonomy (structural SQL diff), not a human audit.",
+    "Rows that hit generation/API errors count as EX=0.",
+    "Cost uses recorded token counts (thinking tokens included); NLSQL_CACHE_DIR cache hits count as $0."
+  ]
+}
