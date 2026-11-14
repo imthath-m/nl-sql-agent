@@ -5,32 +5,48 @@ NL→SQL analytics agent on the BIRD dev benchmark (Gemini). Phases 1–6 are bu
 ## Results
 
 <!-- RESULTS:BEGIN -->
-Live runs on 2026-11-14, OpenAI provider (`gpt-4.1-mini` generator, `gpt-4.1` judge). No Gemini run is committed.
+Live runs on 2026-11-14, OpenAI provider (`gpt-5.6-luna` generator, `gpt-5.6-terra` judge, `reasoning_effort` low). No Gemini run is committed. An earlier run with `gpt-4.1-mini` / `gpt-4.1` is archived in `results/gpt-4.1-mini/`.
 
 **Pipeline, 150-example BIRD dev subset, seed 0** (source: `results/summary.md`)
 
 | mode | EX % | delta vs baseline (pp) | fixed / broken | est. cost USD | latency mean s | p95 s |
 |---|---|---|---|---|---|---|
-| baseline | 46.67 | - | - | 0.0710 | 1.69 | 1.597 |
-| loop | 47.33 | +0.67 | 2 / 1 | 0.0907 | 1.579 | 2.155 |
-| phase 3 | 42.0 | -4.67 | 6 / 13 | 0.1572 | 3.08 | 4.219 |
+| baseline | 52.67 | - | - | 0.0704 | 3.645 | 7.713 |
+| loop | 53.33 | +0.67 | 4 / 3 | 0.0888 | 4.644 | 8.544 |
+| phase 3 | 47.33 | -5.33 | 3 / 11 | 0.1158 | 5.528 | 11.683 |
 
-Phase 3 (retriever + planner) scored below baseline on this subset.
+Phase 3 (retriever + planner) scored below baseline on this subset (fixed 3, broken 11).
 
 **Prompt tuning, dev 100 / held-out 200, seed 13** (source: `results/tune/report.md`)
 
 | prompt | dev EX % | held-out EX % |
 |---|---|---|
-| `generator_v1` (baseline) | 58.0 | 49.5 |
-| `generator_v2_schema_linking` (winner, chosen on dev only) | 59.0 | 53.0 |
+| `generator_v1` (baseline) | 67.0 | 56.0 |
+| `generator_v2_schema_linking` (winner, chosen on dev only) | 70.0 | 57.0 |
 
-Held-out delta +3.5 pp; discordant pairs 5 vs 12; exact McNemar p = 0.1435; bootstrap 95% CI [-0.5, 7.5] pp. Not statistically significant.
+Held-out delta +1.0 pp; discordant pairs 8 vs 10; exact McNemar p = 0.8145; bootstrap 95% CI [-3.0, 5.0] pp. Not statistically significant.
 
 **Judge vs EX, same held-out 200** (source: `results/judge/report.md`)
 
-Agreement 68.5%, Cohen's kappa 0.3477. EX=0 but judge correct: 57. EX=1 but judge wrong: 6. Ten examples are in the report.
+Agreement 78.0%, Cohen's kappa 0.538. EX=0 but judge correct: 32. EX=1 but judge wrong: 12. Ten examples are in the report.
 
-Estimated cost: run_all $0.3189, tuning $0.3770, judge $0.1821. Costs are token counts x configured list prices.
+Estimated cost: run_all $0.2750, tuning $0.3588, judge $0.3330. Costs are token counts x configured list prices.
+
+**Comparison with the archived `gpt-4.1-mini` run** (sources: `results/gpt-4.1-mini/summary.md`, `results/gpt-4.1-mini/tune/report.md`, `results/gpt-4.1-mini/judge/report.md`; same seeds and question ids)
+
+| metric | gpt-4.1-mini / gpt-4.1 | gpt-5.6-luna / gpt-5.6-terra |
+|---|---|---|
+| EX % baseline (n=150) | 46.67 | 52.67 |
+| EX % loop | 47.33 | 53.33 |
+| EX % phase 3 | 42.0 | 47.33 |
+| Held-out EX % `generator_v1` (n=200) | 49.5 | 56.0 |
+| Held-out EX % `generator_v2_schema_linking` | 53.0 | 57.0 |
+| Tuning delta, McNemar p | +3.5 pp, 0.1435 | +1.0 pp, 0.8145 |
+| Judge agreement with EX | 68.5% | 78.0% |
+| Cost run_all / tuning / judge (USD) | 0.3189 / 0.3770 / 0.1821 | 0.2750 / 0.3588 / 0.3330 |
+| Mean latency baseline (s) | 1.69 | 3.645 |
+
+The tuning gain is not statistically significant in either run. Phase 3 is below baseline in both runs. The newer models raise EX in every comparable cell and cost slightly less for run_all and tuning, but are slower. The judge also costs more because `gpt-5.6-terra` is priced above `gpt-4.1`.
 <!-- RESULTS:END -->
 
 Every figure in this README must come from a committed run file. Sources: `results/summary.md` (EX, paired deltas, cost, latency), `results/tune/report.md` (prompt tuning), `results/judge/report.md` (judge vs EX).
@@ -228,7 +244,7 @@ Automatic. `scripts/run_all.sh` calls `python -m nlsql.fetch_data`, which downlo
 
 ## Notes
 
-- Provider: `NLSQL_PROVIDER=gemini` (default) or `openai` (defaults `gpt-4.1-mini`, judge `gpt-4.1`, embeddings `text-embedding-3-small`).
+- Provider: `NLSQL_PROVIDER=gemini` (default) or `openai` (defaults `gpt-5.6-luna`, judge `gpt-5.6-terra`, embeddings `text-embedding-3-small`; `NLSQL_REASONING_EFFORT` sets `reasoning_effort`, default `low`, sent for non-`gpt-4` models; `temperature=0` is sent only for `gpt-4*` models because the newer ones reject it).
 - Credentials: AI Studio (`GEMINI_API_KEY`) or Vertex ADC (`GOOGLE_GENAI_USE_VERTEXAI=true` + project). google-genai auto-detects.
 - The generator gets question + BIRD `evidence` (external knowledge) + schema DDL — evidence grounding is the point of BIRD.
 - Embeddings and the LLM share one google-genai client; credentials are the same. Set `NLSQL_EMBED_MODEL` / `NLSQL_RETRIEVE_TOP_K` to override the retriever defaults.
