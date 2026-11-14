@@ -5,10 +5,35 @@ NL→SQL analytics agent on the BIRD dev benchmark (Gemini). Phases 1–6 are bu
 ## Results
 
 <!-- RESULTS:BEGIN -->
-No live run committed yet. Run `scripts/run_all.sh` and `python -m nlsql.tune` with `GEMINI_API_KEY` set.
+Live runs on 2026-11-14, OpenAI provider (`gpt-4.1-mini` generator, `gpt-4.1` judge). No Gemini run is committed.
+
+**Pipeline, 150-example BIRD dev subset, seed 0** (source: `results/summary.md`)
+
+| mode | EX % | delta vs baseline (pp) | fixed / broken | est. cost USD | latency mean s | p95 s |
+|---|---|---|---|---|---|---|
+| baseline | 46.67 | - | - | 0.0710 | 1.69 | 1.597 |
+| loop | 47.33 | +0.67 | 2 / 1 | 0.0907 | 1.579 | 2.155 |
+| phase 3 | 42.0 | -4.67 | 6 / 13 | 0.1572 | 3.08 | 4.219 |
+
+Phase 3 (retriever + planner) scored below baseline on this subset.
+
+**Prompt tuning, dev 100 / held-out 200, seed 13** (source: `results/tune/report.md`)
+
+| prompt | dev EX % | held-out EX % |
+|---|---|---|
+| `generator_v1` (baseline) | 58.0 | 49.5 |
+| `generator_v2_schema_linking` (winner, chosen on dev only) | 59.0 | 53.0 |
+
+Held-out delta +3.5 pp; discordant pairs 5 vs 12; exact McNemar p = 0.1435; bootstrap 95% CI [-0.5, 7.5] pp. Not statistically significant.
+
+**Judge vs EX, same held-out 200** (source: `results/judge/report.md`)
+
+Agreement 68.5%, Cohen's kappa 0.3477. EX=0 but judge correct: 57. EX=1 but judge wrong: 6. Ten examples are in the report.
+
+Estimated cost: run_all $0.3189, tuning $0.3770, judge $0.1821. Costs are token counts x configured list prices.
 <!-- RESULTS:END -->
 
-Every figure in this README must come from a committed run file. Planned sources: `results/summary.md` (EX, paired deltas, cost, latency), `results/tune/report.md` (prompt tuning), `results/judge/report.md` (judge vs EX).
+Every figure in this README must come from a committed run file. Sources: `results/summary.md` (EX, paired deltas, cost, latency), `results/tune/report.md` (prompt tuning), `results/judge/report.md` (judge vs EX).
 
 ## Status
 
@@ -18,24 +43,25 @@ Every figure in this README must come from a committed run file. Planned sources
 | Executor loop + explainer (phase 2) | built, offline-verified | `src/nlsql/loop.py`, `src/nlsql/executor.py` |
 | Retriever + planner (phase 3) | built, offline-verified | `src/nlsql/retriever.py`, `src/nlsql/planner.py` |
 | Eval suite: taxonomy, schema-linking, cost, regression (phase 4) | built, offline-verified | `src/nlsql/taxonomy.py`, `schema_link.py`, `cost.py`, `regression.py`, `run_eval.py` |
-| LLM judge (phase 4) | built; live run pending | `src/nlsql/judge.py` |
+| LLM judge (phase 4) | live-run (OpenAI) | `src/nlsql/judge.py`, `results/judge/report.md` |
 | Abstention gate + gate eval (phase 5) | built, offline-verified | `src/nlsql/gate.py`, `gate_eval.py` |
 | Traces + review view (phase 6) | built, offline-verified | `src/nlsql/trace.py`, `review.py` |
-| One-command runner (baseline + loop + phase 3 + eval) | built; live run pending | `scripts/run_all.sh`, `src/nlsql/run_all.py` |
-| Prompt-tuning experiment (dev / held-out, McNemar) | built; live run pending | `src/nlsql/tune.py`, `src/nlsql/prompts/` |
-| Judge-vs-EX check on held-out rows | built; live run pending | `src/nlsql/judge_check.py` |
+| One-command runner (baseline + loop + phase 3 + eval) | live-run (OpenAI, n=150) | `scripts/run_all.sh`, `results/summary.md` |
+| Prompt-tuning experiment (dev / held-out, McNemar) | live-run (OpenAI) | `src/nlsql/tune.py`, `results/tune/report.md` |
+| Judge-vs-EX check on held-out rows | live-run (OpenAI) | `src/nlsql/judge_check.py`, `results/judge/report.md` |
 | Offline selfchecks | built | `scripts/selfcheck.sh` |
-| Live BIRD results (any phase) | **not run** | none committed (`results/` absent, `runs/` is gitignored) |
+| Live BIRD results: baseline, loop, phase 3 | live-run on a 150-example subset (OpenAI) | `results/run_all/`, `results/summary.md` |
+| Live Gemini results; full 1534-example run; phase 5 gate | **not run** | none committed |
 
 "offline-verified" means the module's `_selfcheck` passes without an API or data. It does not mean a live score exists.
 
-## Phase 1 — status: built (live result not committed)
+## Phase 1 — status: live-run on subset (OpenAI; see Results)
 
 Single-pass Gemini Flash generator scored with the official BIRD execution-accuracy (EX) metric.
 
 No committed run file backs a baseline score. A figure of 66% EX on the 50-example smoke subset (`gemini-2.5-flash`) appears only in the phase-1 commit message (`709d6da`). It is a historical, unverified local figure: treat it as unconfirmed, not as a current result. The number that counts is the one `scripts/run_all.sh` writes to `results/summary.md`.
 
-## Phase 2 — status: built; live run pending
+## Phase 2 — status: live-run on subset (OpenAI; see Results)
 
 Executor loop + Result-Explainer wrapped around the phase-1 generator:
 
@@ -44,9 +70,9 @@ Executor loop + Result-Explainer wrapped around the phase-1 generator:
 - Once the SQL runs, the **Result-Explainer** (`explainer.explain`) restates the answer in one plain sentence.
 - `run_loop` re-scores the smoke subset and logs `ex_delta_vs_baseline` against the last baseline in `scores.log`.
 
-Run `python -m nlsql.run_loop` (needs the BIRD data + a `GEMINI_API_KEY`) to record the score delta. No live result is committed yet; `scripts/run_all.sh` fills `results/summary.md` once run with a key.
+Run `python -m nlsql.run_loop` (needs the BIRD data + a `GEMINI_API_KEY`) to record the score delta. The committed paired delta is in `results/summary.md`.
 
-## Phase 3 — status: built; live run pending (awaiting first BIRD run)
+## Phase 3 — status: live-run on subset (OpenAI; see Results); full dev set not run
 
 Schema-Retriever + Planner bolted onto the front of the phase-2 loop, run over the **full BIRD dev set** (1534 examples):
 
@@ -55,7 +81,7 @@ Schema-Retriever + Planner bolted onto the front of the phase-2 loop, run over t
 - `loop.solve(..., retrieve_top_k=5, use_planner=True)` runs the full pipeline: **retrieve → plan → generate → execute → repair → explain**. Both stages are opt-in — the defaults reproduce phase 2 exactly.
 - `run_phase3` scores the full dev set and logs `mode: phase3` with `ex_delta_vs_baseline` / `ex_delta_vs_loop`.
 
-Run `python -m nlsql.run_phase3` (needs the BIRD data + a `GEMINI_API_KEY`) to record the first full BIRD score. `scripts/run_all.sh` runs phase 3 on a fixed-seed subset alongside baseline and loop, and its results will be filled from `results/summary.md` once run with a key.
+Run `python -m nlsql.run_phase3` (needs the BIRD data + a `GEMINI_API_KEY`) to record the first full BIRD score. `scripts/run_all.sh` runs phase 3 on a fixed-seed subset alongside baseline and loop; results are in `results/summary.md`.
 
 ## Phase 4 — status: built (eval suite; runs offline over run files)
 
@@ -147,6 +173,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 source .venv/bin/activate
 export PYTHONPATH=src              # so `python -m nlsql.*` works from the repo root
 export GEMINI_API_KEY=...          # or the Vertex ADC vars (see Notes)
+# OpenAI instead: export NLSQL_PROVIDER=openai OPENAI_API_KEY=...  (the committed results used this)
 
 scripts/run_all.sh [--n 150] [--seed 0] [--workers 4] [--model M] [--fresh]
 ```
@@ -201,6 +228,7 @@ Automatic. `scripts/run_all.sh` calls `python -m nlsql.fetch_data`, which downlo
 
 ## Notes
 
+- Provider: `NLSQL_PROVIDER=gemini` (default) or `openai` (defaults `gpt-4.1-mini`, judge `gpt-4.1`, embeddings `text-embedding-3-small`).
 - Credentials: AI Studio (`GEMINI_API_KEY`) or Vertex ADC (`GOOGLE_GENAI_USE_VERTEXAI=true` + project). google-genai auto-detects.
 - The generator gets question + BIRD `evidence` (external knowledge) + schema DDL — evidence grounding is the point of BIRD.
 - Embeddings and the LLM share one google-genai client; credentials are the same. Set `NLSQL_EMBED_MODEL` / `NLSQL_RETRIEVE_TOP_K` to override the retriever defaults.

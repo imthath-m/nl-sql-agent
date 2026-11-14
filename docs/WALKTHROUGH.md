@@ -113,7 +113,7 @@ Outputs: `results/tune/report.md` and `results/tune/report.json`.
 
 ## 5. Limitations
 
-- No live result is committed yet. Every number must come from `results/`.
+- Committed live results are from one OpenAI run on subsets (150 for the pipeline, 100/200 for tuning). No Gemini or full-dev run is committed. Every number must come from `results/`.
 - BIRD dev is public. The model may have seen it in training. Treat scores as checkpoints, not guarantees.
 - EX compares result sets. It can mark right answers wrong and wrong answers right.
 - The failure taxonomy is rule-based. It is a guide, not ground truth.
@@ -152,7 +152,7 @@ Note on `review`: the page sorts by gate confidence. Only phase-5-style rows car
 | 1:30-2:30 | `sed -n 1,40p docs/WALKTHROUGH.md` | Walk the pipeline steps in section 2 and say what each one is for. |
 | 2:30-3:00 | `python -m nlsql.review _selfcheck` | "The review page renders from a run file. This check proves the page sorts low confidence first and shows trace, SQL, schema and answer." |
 | 3:00-4:15 | Build a toy run file and render it (below) | "These two rows are made-up demo data, not results. The low-confidence abstained row comes first." |
-| 4:15-5:00 | Open `results/summary.md` if it exists, else `plan.md` | "No live run yet. Here is where the numbers will appear, and the roadmap." |
+| 4:15-5:00 | Open `results/summary.md`, then `results/tune/report.md` | "These are the measured numbers: EX, paired deltas, cost, latency, and the held-out prompt test." |
 
 Toy run file for the offline demo (hand-written, not real output):
 
