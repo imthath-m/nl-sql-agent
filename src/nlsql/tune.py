@@ -191,7 +191,7 @@ def summarize(rows: list[dict], prompt_name: str, split: str, seed: int, model: 
         "split": split,
         "seed": seed,
         "model": model,
-        "provider": config.PROVIDER,
+        "provider": config.PROVIDER, "reasoning_effort": agent.reasoning_effort(),
         "n": len(rows),
         "errors": sum("error" in r for r in rows),
         "ex_overall": round(sum(r["ex"] for r in rows) / len(rows) * 100, 2),
@@ -367,8 +367,8 @@ def build_report(args, manifest, dev_summaries, chosen, reasoning, frozen, held_
     caveats = [
         f"Held-out n={held_s[BASELINE]['n']}: only differences of several pp are detectable; "
         "a non-significant McNemar p is not evidence of no effect.",
-        "Single run per prompt; " + ("OpenAI generation uses temperature 0 but is still not fully "
-        "deterministic" if config.PROVIDER == "openai" else "generation uses the API default temperature "
+        "Single run per prompt; " + ("OpenAI generation uses temperature 0 for gpt-4* models only (newer models reject it; "
+        "reasoning_effort is set instead), so it is not deterministic" if config.PROVIDER == "openai" else "generation uses the API default temperature "
         "(not set to 0)") + ", so EX has run-to-run noise of its own.",
         "Failure causes come from the rule-based taxonomy (structural SQL diff), not a human audit.",
         "Rows that hit generation/API errors count as EX=0.",
@@ -383,7 +383,7 @@ def build_report(args, manifest, dev_summaries, chosen, reasoning, frozen, held_
         "git_sha": _git_sha(),
         "seed": args.seed,
         "model": args.model,
-        "provider": config.PROVIDER,
+        "provider": config.PROVIDER, "reasoning_effort": agent.reasoning_effort(),
         "judge_model": config.JUDGE_MODEL,
         "workers": args.workers,
         "split": {"dev_n": args.dev, "heldout_n": args.heldout, "splits_file": "splits.json"},
@@ -404,7 +404,7 @@ def build_report(args, manifest, dev_summaries, chosen, reasoning, frozen, held_
 
 def render_md(rep: dict) -> str:
     L = ["# Generator prompt tuning", "",
-         f"- Command: `{rep['command']}`", f"- Provider: {rep.get('provider', 'gemini')}  Model: {rep['model']}  Seed: {rep['seed']}",
+         f"- Command: `{rep['command']}`", f"- Provider: {rep.get('provider', 'gemini')}  Model: {rep['model']}  Reasoning effort: {rep.get('reasoning_effort', 'n/a')}  Seed: {rep['seed']}",
          f"- Git: {rep['git_sha']}  Timestamp: {rep['timestamp']}",
          f"- Split: dev {rep['split']['dev_n']} / held-out {rep['split']['heldout_n']} (disjoint, `splits.json`)",
          "", "## Dev (selection set)", "",

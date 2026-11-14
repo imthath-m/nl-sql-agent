@@ -18,7 +18,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import config
+from . import agent, config
 
 MODES = ("baseline", "loop", "phase3")
 EARLY_ROWS = 20  # abort if >50% of the first 20 finished rows errored
@@ -130,7 +130,7 @@ def render_md(s: dict) -> str:
     for name, m in s["modes"].items():
         lines.append(f"- {name}: " + (", ".join(f"{k} ({v})" for k, v in m["top_failures"]) or "none"))
     lines += ["", "## Provenance",
-              f"- Command: `{s['command']}`", f"- Seed: {s['seed']}", f"- Provider: {s.get('provider', 'gemini')}  Model: {s['model']}",
+              f"- Command: `{s['command']}`", f"- Seed: {s['seed']}", f"- Provider: {s.get('provider', 'gemini')}  Model: {s['model']}  Reasoning effort: {s.get('reasoning_effort', 'n/a')}",
               f"- Commit: {s['commit']}", f"- Timestamp (UTC): {s['timestamp']}", "",
               f"Caveats: subset of n={s['n']} BIRD dev examples (seed {s['seed']}); cost is an estimate "
               "from token counts x configured prices; deltas are paired by question_id vs baseline."]
@@ -187,10 +187,11 @@ def main() -> None:
         rows = run_mode(m, fns[m], subset, a.out, a.workers, a.fresh)
         summary = {**mods[m]._summary(rows), "mode": m, "seed": a.seed, "n": len(rows),
                    "question_ids": [r["question_id"] for r in rows], "model": a.model, "provider": config.PROVIDER,
-                   "commit": sha, "timestamp": ts}
+                   "reasoning_effort": agent.reasoning_effort(), "commit": sha, "timestamp": ts}
         runs[m] = {"summary": summary, "results": rows}
     meta = {"command": "python -m nlsql.run_all " + " ".join(sys.argv[1:]), "seed": a.seed, "n": len(subset),
-            "model": a.model, "provider": config.PROVIDER, "commit": sha, "timestamp": ts}
+            "model": a.model, "provider": config.PROVIDER, "reasoning_effort": agent.reasoning_effort(),
+            "commit": sha, "timestamp": ts}
     write_all(a.out, runs, meta)
     print((a.out.parent / "summary.md").read_text())
 

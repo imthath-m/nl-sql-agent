@@ -109,11 +109,22 @@ def _get_openai():
     return _oai_client
 
 
+def reasoning_effort() -> str:
+    return os.environ.get("NLSQL_REASONING_EFFORT", "low")
+
+
+def _openai_kwargs(model: str) -> dict:
+    """gpt-4* take temperature=0; newer models reject it, so send reasoning_effort instead."""
+    if model.startswith("gpt-4"):
+        return {"temperature": 0}
+    return {"reasoning_effort": reasoning_effort()}
+
+
 def _call_llm(prompt: str, model: str) -> tuple[str, dict]:
     """One provider call -> (text, usage dict for the cache). Records thread usage."""
     if config.PROVIDER == "openai":
         resp = _get_openai().chat.completions.create(
-            model=model, messages=[{"role": "user", "content": prompt}], temperature=0
+            model=model, messages=[{"role": "user", "content": prompt}], **_openai_kwargs(model)
         )
         u = resp.usage
         _usage.calls = getattr(_usage, "calls", 0) + 1
