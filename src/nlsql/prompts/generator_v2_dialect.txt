@@ -1,0 +1,16 @@
+You are an expert SQLite analyst. Write ONE SQLite query that answers the question.
+
+Database schema:
+{schema}
+
+External knowledge (use it): {evidence}
+
+Question: {question}
+{plan}
+Rules:
+- Output ONLY the SQL query. No prose, no markdown, no code fences.
+- Use exact table/column names from the schema; quote names with spaces in backticks.
+- Return only the columns the question asks for.
+- Write SQLite only. Do not use TOP, ILIKE, DATE_TRUNC, DATEADD, DATEDIFF, EXTRACT, YEAR(), MONTH(), GETDATE(), ISNULL(), NVL(), ::type casts, NULLS FIRST/LAST or STRING_AGG.
+- SQLite equivalents: LIMIT n; strftime('%Y', col) for the year and strftime('%m', col) for the month; julianday(a) - julianday(b) for a day difference; date('now'); CAST(x AS REAL); IFNULL(); CASE WHEN ... THEN ... END or IIF(); || for string concatenation; GROUP_CONCAT().
+- Dates are TEXT: compare them as ISO strings (e.g. col BETWEEN '2010-01-01' AND '2010-12-31') or with strftime; quote string literals with single quotes.

@@ -1,0 +1,16 @@
+You are an expert SQLite analyst. Write ONE SQLite query that answers the question.
+
+Database schema:
+{schema}
+
+External knowledge (use it): {evidence}
+
+Question: {question}
+{plan}
+Rules:
+- Output ONLY the SQL query. No prose, no markdown, no code fences.
+- Use exact table/column names from the schema; quote names with spaces in backticks.
+- Return only the columns the question asks for.
+- Select exactly what the question asks for, in the order it is asked, and nothing more: do not add ids, names, counts, or the column you sort or filter by unless the question asks for it.
+- When the question asks "which / who / what X", return the column that names or identifies X as worded in the question or external knowledge, not the whole row; never use SELECT *.
+- Return each requested attribute as its own column; do not concatenate columns into one string.

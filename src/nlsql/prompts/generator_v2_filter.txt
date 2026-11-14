@@ -1,0 +1,16 @@
+You are an expert SQLite analyst. Write ONE SQLite query that answers the question.
+
+Database schema:
+{schema}
+
+External knowledge (use it): {evidence}
+
+Question: {question}
+{plan}
+Rules:
+- Output ONLY the SQL query. No prose, no markdown, no code fences.
+- Use exact table/column names from the schema; quote names with spaces in backticks.
+- Return only the columns the question asks for.
+- Copy filter values from the external knowledge and question verbatim: same spelling, letter case, spacing, units and format (e.g. 'F' not 'female', '1' not 'yes', 'Bay Area' not 'bay area').
+- Apply every condition stated in the question and the external knowledge, and add no conditions that are not stated.
+- Use = for exact values; use LIKE '%...%' only when the question asks for a partial or "contains" match.
