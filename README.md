@@ -1,14 +1,41 @@
 # nl-sql-agent
 
-NL→SQL analytics agent. Phase 1: BIRD-SQL baseline. See [plan.md](plan.md) for the roadmap.
+NL→SQL analytics agent on the BIRD dev benchmark (Gemini). Phases 1–6 are built (baseline, executor loop, retriever + planner, eval suite, abstention gate, traces + review view). Phase 7+ (Spider 2.0-Lite) is not started. See [plan.md](plan.md) for the roadmap and [docs/WALKTHROUGH.md](docs/WALKTHROUGH.md) for a plain-language tour and a 5-minute demo script.
 
-## Phase 1 — status: done
+## Results
+
+<!-- RESULTS:BEGIN -->
+No live run committed yet. Run `scripts/run_all.sh` and `python -m nlsql.tune` with `GEMINI_API_KEY` set.
+<!-- RESULTS:END -->
+
+Every figure in this README must come from a committed run file. Planned sources: `results/summary.md` (EX, paired deltas, cost, latency), `results/tune/report.md` (prompt tuning), `results/judge/report.md` (judge vs EX).
+
+## Status
+
+| Component | Status | Evidence |
+|-----------|--------|----------|
+| Baseline generator + EX scorer (phase 1) | built, offline-verified (scorer) | `src/nlsql/run_baseline.py`, `src/nlsql/score.py` (`_selfcheck`) |
+| Executor loop + explainer (phase 2) | built, offline-verified | `src/nlsql/loop.py`, `src/nlsql/executor.py` |
+| Retriever + planner (phase 3) | built, offline-verified | `src/nlsql/retriever.py`, `src/nlsql/planner.py` |
+| Eval suite: taxonomy, schema-linking, cost, regression (phase 4) | built, offline-verified | `src/nlsql/taxonomy.py`, `schema_link.py`, `cost.py`, `regression.py`, `run_eval.py` |
+| LLM judge (phase 4) | built; live run pending | `src/nlsql/judge.py` |
+| Abstention gate + gate eval (phase 5) | built, offline-verified | `src/nlsql/gate.py`, `gate_eval.py` |
+| Traces + review view (phase 6) | built, offline-verified | `src/nlsql/trace.py`, `review.py` |
+| One-command runner (baseline + loop + phase 3 + eval) | built; live run pending | `scripts/run_all.sh`, `src/nlsql/run_all.py` |
+| Prompt-tuning experiment (dev / held-out, McNemar) | built; live run pending | `src/nlsql/tune.py`, `src/nlsql/prompts/` |
+| Judge-vs-EX check on held-out rows | built; live run pending | `src/nlsql/judge_check.py` |
+| Offline selfchecks | built | `scripts/selfcheck.sh` |
+| Live BIRD results (any phase) | **not run** | none committed (`results/` absent, `runs/` is gitignored) |
+
+"offline-verified" means the module's `_selfcheck` passes without an API or data. It does not mean a live score exists.
+
+## Phase 1 — status: built (live result not committed)
 
 Single-pass Gemini Flash generator scored with the official BIRD execution-accuracy (EX) metric.
 
-**Baseline: 66% EX** on the 50-example smoke subset (`gemini-2.5-flash`, 0 errors). Latest run in `runs/`.
+No committed run file backs a baseline score. A figure of 66% EX on the 50-example smoke subset (`gemini-2.5-flash`) appears only in the phase-1 commit message (`709d6da`). It is a historical, unverified local figure: treat it as unconfirmed, not as a current result. The number that counts is the one `scripts/run_all.sh` writes to `results/summary.md`.
 
-## Phase 2 — status: done (built; awaiting live re-run)
+## Phase 2 — status: built; live run pending
 
 Executor loop + Result-Explainer wrapped around the phase-1 generator:
 
@@ -17,9 +44,9 @@ Executor loop + Result-Explainer wrapped around the phase-1 generator:
 - Once the SQL runs, the **Result-Explainer** (`explainer.explain`) restates the answer in one plain sentence.
 - `run_loop` re-scores the smoke subset and logs `ex_delta_vs_baseline` against the last baseline in `scores.log`.
 
-Run `python -m nlsql.run_loop` (needs the BIRD data + a `GEMINI_API_KEY`) to record the score delta.
+Run `python -m nlsql.run_loop` (needs the BIRD data + a `GEMINI_API_KEY`) to record the score delta. No live result is committed yet; `scripts/run_all.sh` fills `results/summary.md` once run with a key.
 
-## Phase 3 — status: built (awaiting first full BIRD run)
+## Phase 3 — status: built; live run pending (awaiting first BIRD run)
 
 Schema-Retriever + Planner bolted onto the front of the phase-2 loop, run over the **full BIRD dev set** (1534 examples):
 
@@ -28,7 +55,7 @@ Schema-Retriever + Planner bolted onto the front of the phase-2 loop, run over t
 - `loop.solve(..., retrieve_top_k=5, use_planner=True)` runs the full pipeline: **retrieve → plan → generate → execute → repair → explain**. Both stages are opt-in — the defaults reproduce phase 2 exactly.
 - `run_phase3` scores the full dev set and logs `mode: phase3` with `ex_delta_vs_baseline` / `ex_delta_vs_loop`.
 
-Run `python -m nlsql.run_phase3` (needs the BIRD data + a `GEMINI_API_KEY`) to record the first full BIRD score.
+Run `python -m nlsql.run_phase3` (needs the BIRD data + a `GEMINI_API_KEY`) to record the first full BIRD score. `scripts/run_all.sh` runs phase 3 on a fixed-seed subset alongside baseline and loop, and its results will be filled from `results/summary.md` once run with a key.
 
 ## Phase 4 — status: built (eval suite; runs offline over run files)
 
@@ -113,56 +140,72 @@ Everything ships a `_selfcheck` and needs no API/data. Generate a page from any 
 
 ## Run
 
+Setup, then one command:
+
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-cp .env.example .env   # set GEMINI_API_KEY, or use the Vertex ADC vars
+source .venv/bin/activate
+export PYTHONPATH=src              # so `python -m nlsql.*` works from the repo root
+export GEMINI_API_KEY=...          # or the Vertex ADC vars (see Notes)
 
-cd src
-../.venv/bin/python -m nlsql.run_baseline            # phase 1: single-pass, 50-example subset
-../.venv/bin/python -m nlsql.run_loop                # phase 2: executor loop + explainer
-../.venv/bin/python -m nlsql.run_loop --limit 0      # full dev set (1534)
-../.venv/bin/python -m nlsql.run_phase3              # phase 3: retriever + planner, full dev set
-../.venv/bin/python -m nlsql.run_phase3 --limit 50   # phase 3 on the smoke subset
-../.venv/bin/python -m nlsql.run_eval runs/phase3_<ts>.json   # phase 4: taxonomy + schema-links + cost (offline)
-../.venv/bin/python -m nlsql.run_eval runs/phase3_<ts>.json --judge   # + frontier LLM judge (needs API)
-../.venv/bin/python -m nlsql.regression runs/old.json runs/new.json   # phase 4: per-example regression diff
-../.venv/bin/python -m nlsql.run_phase5              # phase 5: abstention gate on its held-out split
-../.venv/bin/python -m nlsql.run_phase5 --threshold 0.6   # override the abstain threshold
-../.venv/bin/python -m nlsql.gate_eval runs/phase5_<ts>.json   # phase 5: false-refusal / caught-error + threshold sweep (offline)
-../.venv/bin/python -m nlsql.review runs/phase5_<ts>.json   # phase 6: static HTML review view, low-confidence-first (offline)
-../.venv/bin/python -m nlsql.score                   # scorer self-check (no API/data needed)
-../.venv/bin/python -m nlsql.executor                # executor self-check (no API/data needed)
-../.venv/bin/python -m nlsql.retriever               # retriever self-check (no API/data needed)
-../.venv/bin/python -m nlsql.planner                 # planner self-check (no API/data needed)
-../.venv/bin/python -m nlsql.schema_link             # schema-linking self-check (no API/data needed)
-../.venv/bin/python -m nlsql.taxonomy                # failure-taxonomy self-check (no API/data needed)
-../.venv/bin/python -m nlsql.cost                    # cost/latency self-check (no API/data needed)
-../.venv/bin/python -m nlsql.judge                   # LLM-judge parser self-check (no API/data needed)
-../.venv/bin/python -m nlsql.regression _selfcheck   # regression self-check (no API/data needed)
-../.venv/bin/python -m nlsql.run_eval _selfcheck     # eval-suite self-check (no API/data needed)
-../.venv/bin/python -m nlsql.gate                    # abstention-gate self-check (no API/data needed)
-../.venv/bin/python -m nlsql.gate_eval _selfcheck    # gate-eval self-check (no API/data needed)
-../.venv/bin/python -m nlsql.run_phase5 _selfcheck   # gate-split self-check (no API/data needed)
-../.venv/bin/python -m nlsql.trace                   # trace self-check (no API/data needed)
-../.venv/bin/python -m nlsql.review _selfcheck       # review-view self-check (no API/data needed)
+scripts/run_all.sh [--n 150] [--seed 0] [--workers 4] [--model M] [--fresh]
+```
+
+`run_all.sh` wraps `python -m nlsql.run_all`. It fetches the BIRD dev data if missing (`python -m nlsql.fetch_data`), runs baseline, loop and phase 3 on the same fixed-seed subset, runs `run_eval` on each, and writes `results/run_all/{baseline,loop,phase3}.json`, `results/run_all/eval_<mode>.json`, `results/summary.md` and `results/summary.json` (EX, paired deltas, cost, latency). It is resumable; `--fresh` starts over.
+
+Other experiments:
+
+```bash
+python -m nlsql.tune [--dev 100] [--heldout 200] [--seed 13]   # prompt tuning -> results/tune/report.md + report.json
+python -m nlsql.judge_check                                    # judge vs EX on held-out rows -> results/judge/report.md
+scripts/selfcheck.sh                                           # all offline selfchecks, no key or data needed
+```
+
+Individual runners and checks (these also work without `run_all`):
+
+```bash
+python -m nlsql.run_baseline            # phase 1: single-pass, 50-example subset
+python -m nlsql.run_loop                # phase 2: executor loop + explainer
+python -m nlsql.run_loop --limit 0      # full dev set (1534)
+python -m nlsql.run_phase3              # phase 3: retriever + planner, full dev set
+python -m nlsql.run_phase3 --limit 50   # phase 3 on the smoke subset
+python -m nlsql.run_eval runs/phase3_<ts>.json   # phase 4: taxonomy + schema-links + cost (offline)
+python -m nlsql.run_eval runs/phase3_<ts>.json --judge   # + frontier LLM judge (needs API)
+python -m nlsql.regression runs/old.json runs/new.json   # phase 4: per-example regression diff
+python -m nlsql.run_phase5              # phase 5: abstention gate on its held-out split
+python -m nlsql.run_phase5 --threshold 0.6   # override the abstain threshold
+python -m nlsql.gate_eval runs/phase5_<ts>.json   # phase 5: false-refusal / caught-error + threshold sweep (offline)
+python -m nlsql.review runs/phase5_<ts>.json   # phase 6: static HTML review view, low-confidence-first (offline)
+python -m nlsql.score                   # scorer self-check (no API/data needed)
+python -m nlsql.executor                # executor self-check (no API/data needed)
+python -m nlsql.retriever               # retriever self-check (no API/data needed)
+python -m nlsql.planner                 # planner self-check (no API/data needed)
+python -m nlsql.schema_link             # schema-linking self-check (no API/data needed)
+python -m nlsql.taxonomy                # failure-taxonomy self-check (no API/data needed)
+python -m nlsql.cost                    # cost/latency self-check (no API/data needed)
+python -m nlsql.judge                   # LLM-judge parser self-check (no API/data needed)
+python -m nlsql.regression _selfcheck   # regression self-check (no API/data needed)
+python -m nlsql.run_eval _selfcheck     # eval-suite self-check (no API/data needed)
+python -m nlsql.gate                    # abstention-gate self-check (no API/data needed)
+python -m nlsql.gate_eval _selfcheck    # gate-eval self-check (no API/data needed)
+python -m nlsql.run_phase5 _selfcheck   # gate-split self-check (no API/data needed)
+python -m nlsql.trace                   # trace self-check (no API/data needed)
+python -m nlsql.review _selfcheck       # review-view self-check (no API/data needed)
 ```
 
 Outputs land in `runs/baseline_<ts>.json` / `runs/loop_<ts>.json` / `runs/phase3_<ts>.json` / `runs/phase5_<ts>.json` (per-example gold/pred/EX + latency/tokens + summary; phase 5 also records per-example gate `confidence` + `abstain`) and append to `runs/scores.log` (tagged `mode: baseline` / `mode: loop` / `mode: phase3` / `mode: phase5`). `run_eval` writes `runs/eval_<ts>.json`; `gate_eval` writes `runs/gate_eval_<ts>.json`. Phase-5 run rows also embed a per-example step `trace`; `review` renders any run file into `runs/review_<ts>.html`.
 
-## Data setup (already done locally)
+## Data setup
 
-```bash
-# from the parent dir:
-git clone --depth 1 https://github.com/bird-bench/mini_dev.git bird-sql
-curl -sL https://bird-bench.oss-cn-beijing.aliyuncs.com/dev.zip -o bird-data/dev.zip
-cd bird-data && unzip -q dev.zip && cd dev_20240627 && unzip -q dev_databases.zip
-```
+Automatic. `scripts/run_all.sh` calls `python -m nlsql.fetch_data`, which downloads the BIRD dev set if it is missing. To fetch it by hand, run `python -m nlsql.fetch_data` yourself. Data stays out of this repo (about 700MB); by default it lives in the parent directory (`../bird-data/dev_20240627/`), or set `BIRD_DIR`.
 
 ## Notes
 
 - Credentials: AI Studio (`GEMINI_API_KEY`) or Vertex ADC (`GOOGLE_GENAI_USE_VERTEXAI=true` + project). google-genai auto-detects.
 - The generator gets question + BIRD `evidence` (external knowledge) + schema DDL — evidence grounding is the point of BIRD.
 - Embeddings and the LLM share one google-genai client; credentials are the same. Set `NLSQL_EMBED_MODEL` / `NLSQL_RETRIEVE_TOP_K` to override the retriever defaults.
+- Caveat (unverified): the default embedding model `text-embedding-004` may be retired by Google. If retrieval calls fail with a model-not-found error, set `NLSQL_EMBED_MODEL` to a current embedding model.
+- Optional response cache: set `NLSQL_CACHE_DIR` to cache LLM responses on disk (useful for resumable or repeated runs). The generator prompt now lives in `src/nlsql/prompts/generator_v1.txt`, and thinking tokens are counted in cost.
 - Phase-4 knobs: `NLSQL_JUDGE_MODEL` (default `gemini-2.5-pro`, frontier/offline) picks the judge; `NLSQL_PRICES` (JSON `{"model": {"input": usd, "output": usd}}` per 1M tokens) overrides the cost table.
 - Phase-5 knob: `NLSQL_ABSTAIN_THRESHOLD` (default `0.55`) sets the confidence below which the gate refuses. The gate is our addition — BIRD does not reward abstention — so it is scored on its own held-out split (`bird.gate_split`) with false-refusal / caught-error, not against EX.
 - ADK is still deferred. The phase-3 planner *decomposes* the question in a single up-front call — it does not choose tools or branch — so the whole pipeline (retrieve → plan → generate → execute → repair) stays a *fixed* plain-Python loop: cheaper and directly testable (each component ships a `_selfcheck`). ADK earns its place only once the agent actually selects steps at runtime.
