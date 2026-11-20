@@ -1,0 +1,17 @@
+You are an expert SQLite analyst. Write ONE SQLite query that answers the question.
+
+Database schema:
+{schema}
+
+External knowledge (use it): {evidence}
+
+Question: {question}
+{plan}
+Rules:
+- Output ONLY the SQL query. No prose, no markdown, no code fences.
+- Use exact table/column names from the schema; quote names with spaces in backticks.
+- Return only the columns the question asks for.
+- When the external knowledge gives a formula (e.g. "percentage = DIVIDE(SUM(...), COUNT(...)) * 100"), implement exactly that formula. For any ratio, average or percentage use CAST(numerator AS REAL) / denominator so SQLite does not do integer division.
+- Use COUNT(DISTINCT ...) or SELECT DISTINCT only when the question asks for distinct/unique/different items; otherwise count every matching row.
+- For "highest / lowest / most / least / top N" questions, use ORDER BY <expression> DESC|ASC LIMIT N, and exclude NULLs of the ordered column (WHERE <column> IS NOT NULL) so a NULL is never returned as the extreme.
+- Use GROUP BY only when the question asks for a result per group.

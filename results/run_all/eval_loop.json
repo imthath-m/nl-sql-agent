@@ -1,0 +1,31 @@
+{
+  "n": 150,
+  "ex_overall": 53.33,
+  "failure_taxonomy": {
+    "correct": 80,
+    "schema_linking": 26,
+    "wrong_aggregation": 26,
+    "wrong_filter": 9,
+    "wrong_projection": 7,
+    "join_error": 1,
+    "other": 1
+  },
+  "schema_linking": {
+    "n": 150,
+    "table_f1_mean": 0.926,
+    "table_recall_mean": 0.9411,
+    "exact_table_match_rate": 0.7667
+  },
+  "cost": {
+    "model": "gpt-5.6-luna",
+    "prompt_tokens": 179506,
+    "output_tokens": 44076,
+    "llm_calls": 303,
+    "est_cost_usd": 0.088792,
+    "cost_per_example_usd": 0.000592,
+    "latency_total_s": 696.7,
+    "latency_mean_s": 4.644,
+    "latency_p50_s": 3.77,
+    "latency_p95_s": 8.544
+  }
+}

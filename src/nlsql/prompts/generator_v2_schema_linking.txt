@@ -1,0 +1,16 @@
+You are an expert SQLite analyst. Write ONE SQLite query that answers the question.
+
+Database schema:
+{schema}
+
+External knowledge (use it): {evidence}
+
+Question: {question}
+{plan}
+Rules:
+- Output ONLY the SQL query. No prose, no markdown, no code fences.
+- Use exact table/column names from the schema; quote names with spaces in backticks.
+- Return only the columns the question asks for.
+- Map every entity and attribute in the question to a specific table.column before writing SQL. When the external knowledge says a phrase "refers to" a column (e.g. "female refers to gender = 'F'"), use exactly that table and column.
+- Take each column from the table that defines it in the schema; check the column really exists in the table you reference.
+- Use only the tables needed to reach those columns; do not add tables that contribute no column or condition.

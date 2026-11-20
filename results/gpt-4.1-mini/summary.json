@@ -1,0 +1,123 @@
+{
+  "command": "python -m nlsql.run_all --n 150 --seed 0",
+  "seed": 0,
+  "n": 150,
+  "model": "gpt-4.1-mini",
+  "provider": "openai",
+  "commit": "fd5f0b6f3f4efb3a5c4d96505c5c90ea690f23e6",
+  "timestamp": "2026-11-14T05:48:10Z",
+  "total_cost_usd": 0.318853,
+  "modes": {
+    "baseline": {
+      "n": 150,
+      "ex_pct": 46.67,
+      "ex_by_difficulty": {
+        "challenging": 66.67,
+        "moderate": 42.0,
+        "simple": 46.59
+      },
+      "counts_by_difficulty": {
+        "challenging": 12,
+        "moderate": 50,
+        "simple": 88
+      },
+      "est_cost_usd": 0.070983,
+      "cost_per_example_usd": 0.000473,
+      "latency_mean_s": 1.69,
+      "latency_p50_s": 0.889,
+      "latency_p95_s": 1.597,
+      "llm_calls": 150,
+      "errors": 0,
+      "top_failures": [
+        [
+          "schema_linking",
+          24
+        ],
+        [
+          "wrong_aggregation",
+          24
+        ],
+        [
+          "wrong_filter",
+          16
+        ]
+      ]
+    },
+    "loop": {
+      "n": 150,
+      "ex_pct": 47.33,
+      "ex_by_difficulty": {
+        "challenging": 66.67,
+        "moderate": 42.0,
+        "simple": 47.73
+      },
+      "counts_by_difficulty": {
+        "challenging": 12,
+        "moderate": 50,
+        "simple": 88
+      },
+      "est_cost_usd": 0.090664,
+      "cost_per_example_usd": 0.000604,
+      "latency_mean_s": 1.579,
+      "latency_p50_s": 1.45,
+      "latency_p95_s": 2.155,
+      "llm_calls": 303,
+      "errors": 0,
+      "top_failures": [
+        [
+          "schema_linking",
+          24
+        ],
+        [
+          "wrong_aggregation",
+          23
+        ],
+        [
+          "wrong_filter",
+          16
+        ]
+      ],
+      "fixed": 2,
+      "broken": 1,
+      "delta_pp": 0.67
+    },
+    "phase3": {
+      "n": 150,
+      "ex_pct": 42.0,
+      "ex_by_difficulty": {
+        "challenging": 50.0,
+        "moderate": 40.0,
+        "simple": 42.05
+      },
+      "counts_by_difficulty": {
+        "challenging": 12,
+        "moderate": 50,
+        "simple": 88
+      },
+      "est_cost_usd": 0.157206,
+      "cost_per_example_usd": 0.001048,
+      "latency_mean_s": 3.08,
+      "latency_p50_s": 2.769,
+      "latency_p95_s": 4.219,
+      "llm_calls": 455,
+      "errors": 0,
+      "top_failures": [
+        [
+          "wrong_aggregation",
+          34
+        ],
+        [
+          "schema_linking",
+          29
+        ],
+        [
+          "wrong_filter",
+          11
+        ]
+      ],
+      "fixed": 6,
+      "broken": 13,
+      "delta_pp": -4.67
+    }
+  }
+}

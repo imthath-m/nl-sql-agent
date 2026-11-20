@@ -1,0 +1,38 @@
+{
+  "frozen_at": "2026-11-14T05:49:54+00:00",
+  "winner": "generator_v2_schema_linking",
+  "challenger": "generator_v2_schema_linking",
+  "beat_baseline": true,
+  "dev_ex": {
+    "generator_v1": 58.0,
+    "generator_v2_schema_linking": 59.0,
+    "generator_v2_aggregation": 58.0,
+    "generator_v2_filter": 56.0
+  },
+  "dev_prompt_sha256": {
+    "generator_v1": "68d4ae6926c124cd66f50fed54d2dd5caf4a975bd5248662bca9549fb09d7fb6",
+    "generator_v2_schema_linking": "ad1742a2fd2d88d3cb9edd121e969baf27d46e2cf36f59d6132c8e1c923a9085",
+    "generator_v2_aggregation": "cc17fdc85c7f08bd5f3066dcff5b168bbcad42f08a4bc92f17702910d773483a",
+    "generator_v2_filter": "0e3fb5122abf3b694c6fb1d8d709c38d6f844a1d69bb3d32ee6a4060a2a7a4a3"
+  },
+  "selection_reasoning": [
+    {
+      "cause": "schema_linking",
+      "count": 15,
+      "variant": "generator_v2_schema_linking",
+      "note": "Ground each phrase in a table.column, honour evidence 'refers to' mappings, and drop tables that add no column or condition."
+    },
+    {
+      "cause": "wrong_aggregation",
+      "count": 12,
+      "variant": "generator_v2_aggregation",
+      "note": "Use evidence formulas exactly with CAST(... AS REAL) division, DISTINCT only when asked, ORDER BY ... LIMIT with NULLs excluded for superlatives."
+    },
+    {
+      "cause": "wrong_filter",
+      "count": 6,
+      "variant": "generator_v2_filter",
+      "note": "Copy filter literals verbatim from evidence/question (casing, spelling, codes) and add no unstated conditions."
+    }
+  ]
+}

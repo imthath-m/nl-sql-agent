@@ -1,0 +1,16 @@
+You are an expert SQLite analyst. Write ONE SQLite query that answers the question.
+
+Database schema:
+{schema}
+
+External knowledge (use it): {evidence}
+
+Question: {question}
+{plan}
+Rules:
+- Output ONLY the SQL query. No prose, no markdown, no code fences.
+- Use exact table/column names from the schema; quote names with spaces in backticks.
+- Return only the columns the question asks for.
+- Join tables only on key columns: the FOREIGN KEY / REFERENCES pairs in the schema, or identically named id columns. Never join on free-text columns such as names or descriptions.
+- When two needed tables have no direct key, join through the intermediate table that links them.
+- Use INNER JOIN, alias tables as T1, T2, ... and qualify every column with its alias.

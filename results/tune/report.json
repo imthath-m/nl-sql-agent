@@ -1,0 +1,386 @@
+{
+  "command": "python -m nlsql.tune --dev 100 --heldout 200 --seed 13 --workers 4",
+  "timestamp": "2026-11-14T13:04:13+00:00",
+  "git_sha": "e3a6ee33d8a322c48d21bbad0564600642418cb8-dirty",
+  "seed": 13,
+  "model": "gpt-5.6-luna",
+  "provider": "openai",
+  "reasoning_effort": "low",
+  "judge_model": "gpt-5.6-terra",
+  "workers": 4,
+  "split": {
+    "dev_n": 100,
+    "heldout_n": 200,
+    "splits_file": "splits.json"
+  },
+  "dev": [
+    {
+      "prompt": "generator_v1",
+      "prompt_sha256": "68d4ae6926c124cd66f50fed54d2dd5caf4a975bd5248662bca9549fb09d7fb6",
+      "n": 100,
+      "errors": 0,
+      "ex": 67.0,
+      "ex_by_difficulty": {
+        "challenging": 80.0,
+        "moderate": 51.61,
+        "simple": 72.88
+      },
+      "counts_by_difficulty": {
+        "challenging": 10,
+        "moderate": 31,
+        "simple": 59
+      },
+      "taxonomy": {
+        "correct": 67,
+        "schema_linking": 14,
+        "wrong_aggregation": 10,
+        "wrong_filter": 5,
+        "wrong_projection": 3,
+        "join_error": 1
+      },
+      "targets": [],
+      "cost": {
+        "model": "gpt-5.6-luna",
+        "prompt_tokens": 90760,
+        "output_tokens": 20775,
+        "llm_calls": 100,
+        "est_cost_usd": 0.043082,
+        "cost_per_example_usd": 0.000431,
+        "latency_total_s": 302.4,
+        "latency_mean_s": 3.024,
+        "latency_p50_s": 2.461,
+        "latency_p95_s": 7.459
+      }
+    },
+    {
+      "prompt": "generator_v2_schema_linking",
+      "prompt_sha256": "ad1742a2fd2d88d3cb9edd121e969baf27d46e2cf36f59d6132c8e1c923a9085",
+      "n": 100,
+      "errors": 0,
+      "ex": 70.0,
+      "ex_by_difficulty": {
+        "challenging": 80.0,
+        "moderate": 54.84,
+        "simple": 76.27
+      },
+      "counts_by_difficulty": {
+        "challenging": 10,
+        "moderate": 31,
+        "simple": 59
+      },
+      "taxonomy": {
+        "correct": 70,
+        "schema_linking": 10,
+        "wrong_aggregation": 9,
+        "wrong_filter": 5,
+        "wrong_projection": 4,
+        "dialect_error": 1,
+        "join_error": 1
+      },
+      "targets": [
+        "schema_linking"
+      ],
+      "cost": {
+        "model": "gpt-5.6-luna",
+        "prompt_tokens": 100760,
+        "output_tokens": 22325,
+        "llm_calls": 100,
+        "est_cost_usd": 0.046942,
+        "cost_per_example_usd": 0.000469,
+        "latency_total_s": 288.0,
+        "latency_mean_s": 2.88,
+        "latency_p50_s": 2.327,
+        "latency_p95_s": 6.546
+      }
+    },
+    {
+      "prompt": "generator_v2_aggregation",
+      "prompt_sha256": "cc17fdc85c7f08bd5f3066dcff5b168bbcad42f08a4bc92f17702910d773483a",
+      "n": 100,
+      "errors": 0,
+      "ex": 63.0,
+      "ex_by_difficulty": {
+        "challenging": 50.0,
+        "moderate": 51.61,
+        "simple": 71.19
+      },
+      "counts_by_difficulty": {
+        "challenging": 10,
+        "moderate": 31,
+        "simple": 59
+      },
+      "taxonomy": {
+        "correct": 63,
+        "wrong_aggregation": 12,
+        "schema_linking": 11,
+        "wrong_filter": 7,
+        "wrong_projection": 6,
+        "join_error": 1
+      },
+      "targets": [
+        "wrong_aggregation"
+      ],
+      "cost": {
+        "model": "gpt-5.6-luna",
+        "prompt_tokens": 106360,
+        "output_tokens": 19055,
+        "llm_calls": 100,
+        "est_cost_usd": 0.044138,
+        "cost_per_example_usd": 0.000441,
+        "latency_total_s": 254.7,
+        "latency_mean_s": 2.547,
+        "latency_p50_s": 1.731,
+        "latency_p95_s": 6.427
+      }
+    },
+    {
+      "prompt": "generator_v2_filter",
+      "prompt_sha256": "0e3fb5122abf3b694c6fb1d8d709c38d6f844a1d69bb3d32ee6a4060a2a7a4a3",
+      "n": 100,
+      "errors": 0,
+      "ex": 67.0,
+      "ex_by_difficulty": {
+        "challenging": 60.0,
+        "moderate": 58.06,
+        "simple": 72.88
+      },
+      "counts_by_difficulty": {
+        "challenging": 10,
+        "moderate": 31,
+        "simple": 59
+      },
+      "taxonomy": {
+        "correct": 67,
+        "schema_linking": 11,
+        "wrong_aggregation": 9,
+        "wrong_projection": 6,
+        "wrong_filter": 4,
+        "join_error": 2,
+        "dialect_error": 1
+      },
+      "targets": [
+        "wrong_filter"
+      ],
+      "cost": {
+        "model": "gpt-5.6-luna",
+        "prompt_tokens": 100660,
+        "output_tokens": 20254,
+        "llm_calls": 100,
+        "est_cost_usd": 0.044437,
+        "cost_per_example_usd": 0.000444,
+        "latency_total_s": 263.1,
+        "latency_mean_s": 2.631,
+        "latency_p50_s": 1.951,
+        "latency_p95_s": 7.251
+      }
+    }
+  ],
+  "selection": {
+    "max_variants": 3,
+    "chosen": [
+      "generator_v2_schema_linking",
+      "generator_v2_aggregation",
+      "generator_v2_filter"
+    ],
+    "reasoning": [
+      {
+        "cause": "schema_linking",
+        "count": 14,
+        "variant": "generator_v2_schema_linking",
+        "note": "Ground each phrase in a table.column, honour evidence 'refers to' mappings, and drop tables that add no column or condition."
+      },
+      {
+        "cause": "wrong_aggregation",
+        "count": 10,
+        "variant": "generator_v2_aggregation",
+        "note": "Use evidence formulas exactly with CAST(... AS REAL) division, DISTINCT only when asked, ORDER BY ... LIMIT with NULLs excluded for superlatives."
+      },
+      {
+        "cause": "wrong_filter",
+        "count": 5,
+        "variant": "generator_v2_filter",
+        "note": "Copy filter literals verbatim from evidence/question (casing, spelling, codes) and add no unstated conditions."
+      }
+    ]
+  },
+  "winner": {
+    "name": "generator_v2_schema_linking",
+    "challenger": "generator_v2_schema_linking",
+    "beat_baseline": true,
+    "frozen_at": "2026-11-14T12:59:18+00:00",
+    "challenger_role": "winner"
+  },
+  "heldout": {
+    "runs": [
+      {
+        "prompt": "generator_v1",
+        "prompt_sha256": "68d4ae6926c124cd66f50fed54d2dd5caf4a975bd5248662bca9549fb09d7fb6",
+        "n": 200,
+        "errors": 0,
+        "ex": 56.0,
+        "ex_by_difficulty": {
+          "challenging": 30.77,
+          "moderate": 50.75,
+          "simple": 61.67
+        },
+        "counts_by_difficulty": {
+          "challenging": 13,
+          "moderate": 67,
+          "simple": 120
+        },
+        "taxonomy": {
+          "correct": 112,
+          "schema_linking": 28,
+          "wrong_aggregation": 28,
+          "wrong_filter": 17,
+          "wrong_projection": 11,
+          "join_error": 2,
+          "other": 2
+        },
+        "targets": [],
+        "cost": {
+          "model": "gpt-5.6-luna",
+          "prompt_tokens": 182835,
+          "output_tokens": 43108,
+          "llm_calls": 200,
+          "est_cost_usd": 0.088297,
+          "cost_per_example_usd": 0.000441,
+          "latency_total_s": 582.9,
+          "latency_mean_s": 2.915,
+          "latency_p50_s": 2.48,
+          "latency_p95_s": 6.46
+        }
+      },
+      {
+        "prompt": "generator_v2_schema_linking",
+        "prompt_sha256": "ad1742a2fd2d88d3cb9edd121e969baf27d46e2cf36f59d6132c8e1c923a9085",
+        "n": 200,
+        "errors": 0,
+        "ex": 57.0,
+        "ex_by_difficulty": {
+          "challenging": 30.77,
+          "moderate": 50.75,
+          "simple": 63.33
+        },
+        "counts_by_difficulty": {
+          "challenging": 13,
+          "moderate": 67,
+          "simple": 120
+        },
+        "taxonomy": {
+          "correct": 114,
+          "wrong_aggregation": 27,
+          "schema_linking": 25,
+          "wrong_filter": 18,
+          "wrong_projection": 14,
+          "execution_error": 1,
+          "other": 1
+        },
+        "targets": [
+          "schema_linking"
+        ],
+        "cost": {
+          "model": "gpt-5.6-luna",
+          "prompt_tokens": 202835,
+          "output_tokens": 42770,
+          "llm_calls": 200,
+          "est_cost_usd": 0.091891,
+          "cost_per_example_usd": 0.000459,
+          "latency_total_s": 589.6,
+          "latency_mean_s": 2.948,
+          "latency_p50_s": 2.409,
+          "latency_p95_s": 6.722
+        }
+      }
+    ],
+    "comparison": {
+      "n_paired": 200,
+      "baseline_ex": 56.0,
+      "challenger_ex": 57.0,
+      "delta_pp": 1.0,
+      "b_baseline_only_correct": 8,
+      "c_challenger_only_correct": 10,
+      "mcnemar_exact_p": 0.8145,
+      "bootstrap_ci95_pp": [
+        -3.0,
+        5.0
+      ],
+      "bootstrap": {
+        "n_boot": 10000,
+        "seed": 0
+      },
+      "improved_question_ids": [
+        56,
+        85,
+        120,
+        307,
+        480,
+        929,
+        1063,
+        1250,
+        1389,
+        1511
+      ],
+      "regressed_question_ids": [
+        118,
+        350,
+        945,
+        1037,
+        1277,
+        1296,
+        1375,
+        1500
+      ]
+    }
+  },
+  "cost": {
+    "dev_usd": 0.178599,
+    "heldout_usd": 0.180188,
+    "total_usd": 0.358787
+  },
+  "latency": {
+    "dev_generator_v1": {
+      "latency_mean_s": 3.024,
+      "latency_p50_s": 2.461,
+      "latency_p95_s": 7.459,
+      "latency_total_s": 302.4
+    },
+    "dev_generator_v2_schema_linking": {
+      "latency_mean_s": 2.88,
+      "latency_p50_s": 2.327,
+      "latency_p95_s": 6.546,
+      "latency_total_s": 288.0
+    },
+    "dev_generator_v2_aggregation": {
+      "latency_mean_s": 2.547,
+      "latency_p50_s": 1.731,
+      "latency_p95_s": 6.427,
+      "latency_total_s": 254.7
+    },
+    "dev_generator_v2_filter": {
+      "latency_mean_s": 2.631,
+      "latency_p50_s": 1.951,
+      "latency_p95_s": 7.251,
+      "latency_total_s": 263.1
+    },
+    "heldout_generator_v1": {
+      "latency_mean_s": 2.915,
+      "latency_p50_s": 2.48,
+      "latency_p95_s": 6.46,
+      "latency_total_s": 582.9
+    },
+    "heldout_generator_v2_schema_linking": {
+      "latency_mean_s": 2.948,
+      "latency_p50_s": 2.409,
+      "latency_p95_s": 6.722,
+      "latency_total_s": 589.6
+    }
+  },
+  "caveats": [
+    "Held-out n=200: only differences of several pp are detectable; a non-significant McNemar p is not evidence of no effect.",
+    "Single run per prompt; OpenAI generation uses temperature 0 for gpt-4* models only (newer models reject it; reasoning_effort is set instead), so it is not deterministic, so EX has run-to-run noise of its own.",
+    "Failure causes come from the rule-based taxonomy (structural SQL diff), not a human audit.",
+    "Rows that hit generation/API errors count as EX=0.",
+    "Cost uses recorded token counts (thinking tokens included); NLSQL_CACHE_DIR cache hits count as $0."
+  ]
+}

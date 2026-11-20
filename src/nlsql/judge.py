@@ -43,15 +43,19 @@ _JSON = re.compile(r"\{.*\}", re.DOTALL)
 
 def _parse(text: str) -> dict:
     """Pull the JSON verdict out of the model text and coerce the fields."""
+    unparseable = {"correct": False, "score": 0.0, "reason": "unparseable judge output"}
     m = _JSON.search(text or "")
     if not m:
-        return {"correct": False, "score": 0.0, "reason": "unparseable judge output"}
-    obj = json.loads(m.group(0))
-    return {
-        "correct": bool(obj.get("correct", False)),
-        "score": float(obj.get("score", 0.0)),
-        "reason": str(obj.get("reason", "")).strip(),
-    }
+        return unparseable
+    try:
+        obj = json.loads(m.group(0))
+        return {
+            "correct": bool(obj.get("correct", False)),
+            "score": float(obj.get("score", 0.0)),
+            "reason": str(obj.get("reason", "")).strip(),
+        }
+    except (ValueError, TypeError, AttributeError):  # malformed JSON / non-object / bad score
+        return unparseable
 
 
 def judge(
@@ -80,6 +84,10 @@ def _selfcheck():
     assert fenced["correct"] is False and fenced["score"] == 0.1, fenced
     bad = _parse("the model rambled with no json")
     assert bad["correct"] is False and bad["score"] == 0.0, bad
+    broken = _parse('{"correct": true, "score": 0.9, "reason": "cut off')  # no closing brace
+    assert broken["reason"] == "unparseable judge output", broken
+    broken = _parse('{"correct": true, score: high}')  # malformed JSON
+    assert broken["correct"] is False and broken["reason"] == "unparseable judge output", broken
     print("judge selfcheck ok")
 
 

@@ -16,6 +16,17 @@ _DEFAULT_PRICES = {
     "gemini-2.5-flash-lite": {"input": 0.10, "output": 0.40},
     "gemini-2.5-pro": {"input": 1.25, "output": 10.00},
     "text-embedding-004": {"input": 0.0, "output": 0.0},
+    # OpenAI (estimates)
+    "gpt-4.1-mini": {"input": 0.40, "output": 1.60},
+    "gpt-4.1": {"input": 2.00, "output": 8.00},
+    "gpt-4.1-nano": {"input": 0.10, "output": 0.40},
+    "gpt-5.6-luna": {"input": 0.20, "output": 1.20},
+    "gpt-5.6-terra": {"input": 2.00, "output": 12.00},
+    "gpt-5.6-sol": {"input": 4.00, "output": 20.00},
+    "gpt-5.4-mini": {"input": 0.75, "output": 4.50},
+    "gpt-5.4-nano": {"input": 0.20, "output": 1.25},
+    "gpt-5-mini": {"input": 0.25, "output": 2.00},
+    "text-embedding-3-small": {"input": 0.02, "output": 0.0},
 }
 
 
@@ -65,6 +76,14 @@ def _selfcheck():
     # 1M input + 1M output of flash at 0.30 / 2.50 -> 2.80 USD.
     assert abs(cost_usd("gemini-2.5-flash", 1_000_000, 1_000_000) - 2.80) < 1e-9
     assert cost_usd("unknown-model", 1_000_000, 1_000_000) == 0.0
+    assert abs(cost_usd("gpt-4.1-mini", 1_000_000, 1_000_000) - 2.00) < 1e-9
+    assert abs(cost_usd("gpt-4.1", 1_000_000, 1_000_000) - 10.00) < 1e-9
+    assert abs(cost_usd("gpt-5.6-luna", 1_000_000, 1_000_000) - 1.40) < 1e-9
+    assert abs(cost_usd("gpt-5.6-terra", 1_000_000, 1_000_000) - 14.00) < 1e-9
+    assert abs(cost_usd("gpt-5.6-sol", 1_000_000, 1_000_000) - 24.00) < 1e-9
+    assert abs(cost_usd("gpt-5.4-mini", 1_000_000, 1_000_000) - 5.25) < 1e-9
+    assert abs(cost_usd("gpt-5.4-nano", 1_000_000, 1_000_000) - 1.45) < 1e-9
+    assert abs(cost_usd("gpt-5-mini", 1_000_000, 1_000_000) - 2.25) < 1e-9
 
     os.environ["NLSQL_PRICES"] = '{"unknown-model": {"input": 1.0, "output": 2.0}}'
     assert abs(cost_usd("unknown-model", 1_000_000, 0) - 1.0) < 1e-9

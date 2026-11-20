@@ -14,14 +14,20 @@ DEV_JSON = BIRD_DIR / "dev.json"
 DB_ROOT = BIRD_DIR / "dev_databases"
 
 RUNS_DIR = REPO_ROOT / "runs"
-MODEL = os.environ.get("NLSQL_MODEL", "gemini-2.5-flash")
+
+# LLM provider: "gemini" (google-genai; GEMINI_API_KEY or Vertex env) or "openai".
+PROVIDER = os.environ.get("NLSQL_PROVIDER", "gemini").strip().lower()
+_OPENAI = PROVIDER == "openai"
+
+MODEL = os.environ.get("NLSQL_MODEL", "gpt-5.6-luna" if _OPENAI else "gemini-2.5-flash")
 
 # Phase-3 schema retriever.
-EMBED_MODEL = os.environ.get("NLSQL_EMBED_MODEL", "text-embedding-004")
+EMBED_MODEL = os.environ.get("NLSQL_EMBED_MODEL", "text-embedding-3-small" if _OPENAI else "text-embedding-004"
+)
 RETRIEVE_TOP_K = int(os.environ.get("NLSQL_RETRIEVE_TOP_K", "5"))
 
 # Phase-4 LLM judge: frontier model, run offline only (per plan.md model strategy).
-JUDGE_MODEL = os.environ.get("NLSQL_JUDGE_MODEL", "gemini-2.5-pro")
+JUDGE_MODEL = os.environ.get("NLSQL_JUDGE_MODEL", "gpt-5.6-terra" if _OPENAI else "gemini-2.5-pro")
 
 # Phase-5 abstention gate: refuse when overall confidence falls below this threshold.
 # Our addition — BIRD does not reward abstention (see README).

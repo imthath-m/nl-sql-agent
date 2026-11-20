@@ -8,9 +8,8 @@ have few tables, so this keeps the common case free of embedding calls.
 """
 import math
 import sqlite3
+import time
 from functools import lru_cache
-
-from google.genai import types
 
 from . import agent, bird, config
 
@@ -54,14 +53,30 @@ def _cosine(a: list[float], b: list[float]) -> float:
     return dot / (na * nb) if na and nb else 0.0
 
 
-def _embed(texts: list[str], task_type: str) -> list[list[float]]:
-    """Batch-embed with the Gemini embedding model. Reuses the agent's genai client."""
+def _embed_once(texts: list[str], task_type: str) -> list[list[float]]:
+    if config.PROVIDER == "openai":  # task_type has no OpenAI equivalent; ignored
+        resp = agent._get_openai().embeddings.create(model=config.EMBED_MODEL, input=texts)
+        return [d.embedding for d in sorted(resp.data, key=lambda d: d.index)]
+    from google.genai import types  # lazy: the openai path never needs it
+
     resp = agent._get_client().models.embed_content(
         model=config.EMBED_MODEL,
         contents=texts,
         config=types.EmbedContentConfig(task_type=task_type),
     )
     return [e.values for e in resp.embeddings]
+
+
+def _embed(texts: list[str], task_type: str, retries: int = 3) -> list[list[float]]:
+    """Batch-embed with the provider's embedding model (reuses the agent's client)."""
+    for attempt in range(retries):
+        try:
+            return _embed_once(texts, task_type)
+        except Exception:  # transient API/rate-limit errors -> backoff and retry
+            if attempt == retries - 1:
+                raise
+            time.sleep(2 ** attempt)
+    raise AssertionError("unreachable")
 
 
 def _doc_embeddings(db_id: str) -> list[list[float]]:

@@ -1,0 +1,33 @@
+{
+  "n": 150,
+  "ex_overall": 42.0,
+  "failure_taxonomy": {
+    "correct": 63,
+    "wrong_aggregation": 34,
+    "schema_linking": 29,
+    "wrong_filter": 11,
+    "wrong_projection": 7,
+    "join_error": 5,
+    "other": 1
+  },
+  "schema_linking": {
+    "n": 150,
+    "table_f1_mean": 0.9352,
+    "table_recall_mean": 0.9506,
+    "exact_table_match_rate": 0.7933,
+    "retriever_recall_mean": 0.95,
+    "retriever_covers_all_rate": 0.8933
+  },
+  "cost": {
+    "model": "gpt-4.1-mini",
+    "prompt_tokens": 295172,
+    "output_tokens": 24461,
+    "llm_calls": 455,
+    "est_cost_usd": 0.157206,
+    "cost_per_example_usd": 0.001048,
+    "latency_total_s": 462.0,
+    "latency_mean_s": 3.08,
+    "latency_p50_s": 2.769,
+    "latency_p95_s": 4.219
+  }
+}
